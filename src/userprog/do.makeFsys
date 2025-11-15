@@ -1,0 +1,8 @@
+ 	
+pintos-mkdisk filesys.dsk --filesys-size=2
+pintos -f -q
+pintos -p ../../examples/mytest1 -a mytest1 -- -q
+pintos -p ../../examples/echo.c -a echo.c -- -q
+pintos -p ../../examples/echo -a echo -- -q
+pintos -p ../../examples/cat -a cat -- -q
+pintos -q ls
