@@ -8,4 +8,8 @@
 - [ ] Pass args-multiple
 - [ ] Pass args-many
 - [ ] Pass args-dbl-space
+- [ ] Determine how best to access user memory (manual p. 27)
+- [ ] Implement exit syscall.
+
+
 
