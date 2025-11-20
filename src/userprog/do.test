@@ -1,3 +1,22 @@
-cd build
-pintos -v -k -T 60 --qemu  --filesys-size=2 -p tests/userprog/args-none -a args-none -- -q  -f run args-none < /dev/null
-cd ..
+#!/bin/bash
+# Script to run custom selection of tests in build/tests/userprog
+
+dir=tests/userprog
+
+# Runs these tests
+declare -a tests=(args-single) # args-none args-single)
+  
+for test in "${tests[@]}"
+do
+  echo "Running $test"
+  resfile=$dir/$test.result
+  errfile=$dir/$test.errors
+  outfile=$dir/$test.output
+
+  cd build
+  /bin/rm $resfile $errfile $outfile > /dev/null
+  make $resfile
+
+  cd ..
+
+done
