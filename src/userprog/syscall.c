@@ -11,7 +11,7 @@ static void syscall_handler (struct intr_frame *);
 //void exit (int status);
 void s_exit ();
 void s_halt ();
-void s_write(struct intr_frame *f);
+int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
 
 void
@@ -19,6 +19,14 @@ syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   //intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
+}
+
+static void get_arg(struct intr_frame *f, int *args, int n) {
+    int *sp = (int *) f->esp;
+
+    for (int i = 0; i < n; i++) {
+        args[i] = sp[i + 1];
+    }
 }
 
 static void
@@ -58,8 +66,14 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_READ:
     break;
   case SYS_WRITE:
-    printf("Sys write\n");
-    s_write(f);
+    int args[3];
+     get_arg(f, args, 3);
+     int fd  = args[0];
+     char *buf = (char *) args[1];
+     int n   = args[2];
+     f->eax = s_write(fd, buf, n);
+    //printf("Sys write\n");
+    //s_write(f);
     break;
   case SYS_SEEK:
     break;
@@ -70,7 +84,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   default:
     printf("Sys call is unknown!!\n");
   }
-  thread_exit ();
+  //thread_exit ();
 }
 
 void s_exit () {
@@ -83,25 +97,20 @@ void s_halt () {
   shutdown_power_off();
 }
 
-void s_write(struct intr_frame *f) {
-  void *sp = f->esp;
+int s_write(int pr_fd, char *pr_buf, int n) {
+  // void *sp = f->esp;
+  // char *buf = *(char **)(sp + 8);
+  // int n = *(int *)(sp + 12);
+  // printf("num %d\n",n);
+  // int fd = *(int *)(sp + 4);
+  // printf("fd %d\n", fd);
 
-  char *buf = *(char **)(sp + 8);
-  int n = *(int *)(sp + 12);
-  printf("num %d\n",n);
-
-  int fd = *(int *)(sp + 4);
-  printf("fd %d\n", fd);
-
-  if (fd == 1){
-    putbuf (buf,n);
-    
-    //Return size to write
-    f->eax = n; 
+  if (pr_fd == 1) {
+    putbuf(pr_buf, n);
+    return n; 
   }
 
-  if (fd != 1)
-    f->eax = 0;
+  return 0;
 }
 
 /* Validate data user virtual address uaddr.
