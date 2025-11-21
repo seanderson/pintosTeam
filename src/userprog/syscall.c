@@ -89,7 +89,10 @@ void s_write(void *sp) {
   int n = *(int *)(sp + 12);
   printf("num %d\n",n);
 
-  //putbuf (buf,n);
+  int fd = *(int *)(sp + 1);
+  if (fd == 1){
+    putbuf (buf,n);
+  }
 }
 
 /* Validate data user virtual address uaddr.
