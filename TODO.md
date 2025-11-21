@@ -7,6 +7,16 @@
 - [ ] Pass the args-none test (created by typing *make tests/userprog/args-none.result* in userprog/build. TT
 - [ ] Determine how best to access user memory (manual p. 27).  Validating user addresses. HA
 - [ ] Implement exit syscall.  What happens when a program ends? SK
+- [ ] SK:
+- [ ]   - Currently, process_exit clears the pointer to the page dir used by the current process
+- [ ]   - and then it switches to the kernel page dir
+- [ ]   - and then destroys the page dir used by the current thread
+- [ ]     ----------------
+- [ ]   - This on its own is an issue because a proper process exit requires much more:
+- [ ]   - closing all open files including the executable
+- [ ]   - notifying the parent process and storing the exit status
+- [ ]   - handling orphaned children
+- [ ]   
 - [ ] Syscall write needs to work. KK
 
 ## Future
