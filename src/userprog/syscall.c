@@ -126,6 +126,11 @@ verify_user(const uint8_t *uaddr)
   // is it mapped?  How do I check this?
   // to check if the address is mapped if not return false
 
+  // to check pointer is not null
+  if (uaddr == NULL)
+  {
+    return false;
+  }
   // to check the VADDR is user virtual address
   if (!is_user_vaddr(uaddr))
     return false;
