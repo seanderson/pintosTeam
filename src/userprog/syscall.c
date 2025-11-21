@@ -84,8 +84,9 @@ void s_halt () {
 }
 
 void s_write(void *sp) {
-  char *buf = (char *)(sp + 12);
-  int n = (int)(int *)(sp + 8);
+
+  char *buf = *(char **)(sp + 8);
+  //int n = (int)(int *)(sp + 8);
   printf("num %d\n",n);
 
   //putbuf (buf,n);
