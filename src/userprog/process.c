@@ -91,6 +91,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+	//process_wait should receive exit status via process_exit somehow SK
   while (true) ; //SEA
   return -1;
 }
