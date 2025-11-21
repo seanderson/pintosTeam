@@ -137,3 +137,24 @@ verify_user(const uint8_t *uaddr)
   // retuns false if the address in not mapped
   return pagedir_get_page(thread_current()->pagedir, uaddr) != NULL;
 }
+
+/*
+ Validate that all memory addresses in the buffer is valid
+ and ensures it comes from user memory space and mapped to
+ a valid physical space. RETURN true if all elements in buffer
+ comes from user memory space and mapped.RETURN false if that
+ condition is not meet.
+ */
+static bool
+verify_buf_ptr(const uint8_t *buffer, size_t size)
+{
+  for (size_t i = 0; i < size; i++)
+  {
+    if (!is_user_vaddr(buffer + i))
+    {
+      return false
+    }
+  }
+
+  return true;
+}
