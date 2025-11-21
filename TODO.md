@@ -16,7 +16,8 @@
 - [ ]   - closing all open files including the executable
 - [ ]   - notifying the parent process and storing the exit status
 - [ ]   - handling orphaned children
-- [ ]   
+- [ ]     ----------------
+- [ ]   - right now, I don't know how to see exactly what happens when process_exit is called but i do see the issues as listed above
 - [ ] Syscall write needs to work. KK
 
 ## Future
