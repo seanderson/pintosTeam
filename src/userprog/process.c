@@ -91,7 +91,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // (ASH) Creates an infinite wait loop, doesn't allow the process to move on: while (true) ; //SEA
+  while (true) ; //SEA
   return -1;
 }
 
