@@ -11,7 +11,7 @@ static void syscall_handler (struct intr_frame *);
 //void exit (int status);
 void s_exit ();
 void s_halt ();
-void s_write(void *sp);
+void s_write(struct intr_frame *f);
 static bool verify_user (const uint8_t *uaddr);
 
 void
@@ -59,7 +59,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
   case SYS_WRITE:
     printf("Sys write\n");
-    s_write(f->esp);
+    s_write(f);
     break;
   case SYS_SEEK:
     break;
@@ -83,16 +83,25 @@ void s_halt () {
   shutdown_power_off();
 }
 
-void s_write(void *sp) {
+void s_write(struct intr_frame *f) {
+  void *sp = f->esp;
 
   char *buf = *(char **)(sp + 8);
   int n = *(int *)(sp + 12);
   printf("num %d\n",n);
 
-  int fd = *(int *)(sp + 1);
+  int fd = *(int *)(sp + 4);
+  printf("fd %d\n", fd);
+
   if (fd == 1){
     putbuf (buf,n);
+    
+    //Return size to write
+    f->eax = n; 
   }
+
+  if (fd != 1)
+    f->eax = 0;
 }
 
 /* Validate data user virtual address uaddr.
