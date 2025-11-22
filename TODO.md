@@ -46,14 +46,14 @@
 - [ ] halt:		
 - [ ] multi-child-fd:	
 - [ ] multi-recurse:	
-- [ ] null:		
-- [ ] open-bad-ptr:	
-- [ ] open-boundary:	
-- [ ] open-empty:	
-- [ ] open-missing:	
-- [ ] open-normal:	
-- [ ] open-null:	
-- [ ] open-twice:	
+- [ ] null:
+- [ ] open-bad-ptr:	open file with bad pointer; should exit==-1
+- [ ] open-boundary:	open file with name spanning page boundard; should succeed
+- [ ] open-empty:	open file with empty string name; should exit==-1
+- [ ] open-missing:	open file that does not exist; should exit==-1
+- [ ] open-normal:	open file that exists
+- [ ] open-null:	open file that is null pointer; should exit==-1
+- [ ] open-twice:	open file with same name twice; should succeed with different fds
 - [ ] read-bad-fd:	
 - [ ] read-bad-ptr:	
 - [ ] read-boundary:	
