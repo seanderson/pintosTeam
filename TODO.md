@@ -9,10 +9,72 @@
 - [ ] Implement exit syscall.  What happens when a program ends? SK
 - [ ] Syscall write needs to work. KK
 
-## Future
+## All tests we want to pass with descriptions.  Keep this list intact.  Please fill these descriptions out by reading the test/userprog/*.c files!
 
-- [ ] Pass args-single
-- [ ] Pass args-multiple
-- [ ] Pass args-many
-- [ ] Pass args-dbl-space
-
+- [ ] args-dbl-space:	extra space in user program args
+- [ ] args-many:	extra many user program args
+- [ ] args-multiple:	extra serveral user program args
+- [ ] args-none:	extra user program with no args
+- [ ] args-single:	user program with one arg
+- [ ] bad-jump2:	
+- [ ] bad-jump:		
+- [ ] bad-read2:	
+- [ ] bad-read:		
+- [ ] bad-write2:	
+- [ ] bad-write:	
+- [ ] close-bad-fd:	
+- [ ] close-normal:	
+- [ ] close-stdin:	
+- [ ] close-stdout:	
+- [ ] close-twice:	
+- [ ] create-bad-ptr:	
+- [ ] create-bound:	
+- [ ] create-empty:	
+- [ ] create-exists:	
+- [ ] create-long:	
+- [ ] create-normal:	
+- [ ] create-null:	
+- [ ] exec-arg:		
+- [ ] exec-bad-ptr:	
+- [ ] exec-bound-2:	
+- [ ] exec-bound-3:	
+- [ ] exec-bound:	
+- [ ] exec-missing:	
+- [ ] exec-multiple:	
+- [ ] exec-once:	
+- [ ] exit:		
+- [ ] halt:		
+- [ ] multi-child-fd:	
+- [ ] multi-recurse:	
+- [ ] null:		
+- [ ] open-bad-ptr:	
+- [ ] open-boundary:	
+- [ ] open-empty:	
+- [ ] open-missing:	
+- [ ] open-normal:	
+- [ ] open-null:	
+- [ ] open-twice:	
+- [ ] read-bad-fd:	
+- [ ] read-bad-ptr:	
+- [ ] read-boundary:	
+- [ ] read-normal:	
+- [ ] read-stdout:	
+- [ ] read-zero:	
+- [ ] rox-child:	
+- [ ] rox-multichild:	
+- [ ] rox-simple:	
+- [ ] sc-bad-arg:	
+- [ ] sc-bad-sp:	
+- [ ] sc-boundary-2:	
+- [ ] sc-boundary-3:	
+- [ ] sc-boundary:	
+- [ ] wait-bad-pid:	
+- [ ] wait-killed:	
+- [ ] wait-simple:	
+- [ ] wait-twice:	
+- [ ] write-bad-fd:	give bad file descripter; should exit==-1
+- [ ] write-bad-ptr:	give a bad pointer to write; should exit==-1
+- [ ] write-boundary:	write when data spans two pages in VA space
+- [ ] write-normal:	create and write a simple file
+- [ ] write-stdin:	write to stdin
+- [ ] write-zero:	write no bytes to file, doesn't return 0
