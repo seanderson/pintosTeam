@@ -101,16 +101,18 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // void *sp = f->esp;
   // char *buf = *(char **)(sp + 8);
   // int n = *(int *)(sp + 12);
-  // printf("num %d\n",n);
   // int fd = *(int *)(sp + 4);
-  // printf("fd %d\n", fd);
+  printf("num %d\n",n);
+  printf("fd %d\n", pr_fd);
+  
+  // Needed from HA: Need working verify_user/verify_buf_ptr 
 
   if (pr_fd == 1) {
     putbuf(pr_buf, n);
     return n; 
   }
 
-  return 0;
+  return -1;
 }
 
 /* Validate data user virtual address uaddr.
