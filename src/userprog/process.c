@@ -18,9 +18,30 @@
 #include "threads/malloc.h" //+SEA
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+// Trish put child wait in here to make it easier;
+#include "threads/synch.h"
+// Misha and Trish worked on this file;
+
+struct child_wait {
+  tid_t child_tid;
+  tid_t parent_tid;
+  struct semaphore sema;
+  int exit_status;
+  bool waited;
+  struct list_elem elem;
+};
+
+static struct list child_wait_list;
+static struct lock child_wait_lock;
+static bool cw_initialized = false;
+
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+
+
+
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -31,7 +52,7 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-  printf("\nin proc execute\n");
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -41,6 +62,21 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  
+  list_init(&child_wait_list);
+
+  struct child_wait *cw = malloc(sizeof *cw);
+  cw->child_tid = tid;
+  cw->parent_tid = thread_current()->tid;
+  sema_init(&cw->sema, 0);
+  cw->exit_status = -1;
+  cw->waited = false;
+
+ 
+  list_push_back(&child_wait_list, &cw->elem);
+
+
+  
   if (tid == TID_ERROR) {
     printf("thread creation failed.\n");
     palloc_free_page (fn_copy);
@@ -89,11 +125,42 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait(tid_t child_tid)
 {
-  while (true) ; //SEA
-  return -1;
+  list_init(&child_wait_list);
+
+  struct child_wait *cw = NULL;
+  struct list_elem *e;
+
+  lock_acquire(&child_wait_lock);
+  for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
+    struct child_wait *cur = list_entry(e, struct child_wait, elem);
+    if (cur->child_tid == child_tid &&
+        cur->parent_tid == thread_current()->tid) {
+      cw = cur;
+      break;
+    }
+  }
+
+  if (cw == NULL || cw->waited) {
+    lock_release(&child_wait_lock);
+    return -1;
+  }
+
+  cw->waited = true;
+  lock_release(&child_wait_lock);
+
+  sema_down(&cw->sema);
+
+  lock_acquire(&child_wait_lock);
+  int status = cw->exit_status;
+  list_remove(&cw->elem);
+  lock_release(&child_wait_lock);
+
+  free(cw);
+  return status;
 }
+
 
 /* Free the current process's resources. */
 void
@@ -101,6 +168,19 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+list_init(&child_wait_list);
+lock_acquire(&child_wait_lock);
+struct list_elem *e;
+for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
+  struct child_wait *cw = list_entry(e, struct child_wait, elem);
+  if (cw->child_tid == thread_current()->tid) {
+    cw->exit_status = thread_current()->exit_status;
+    sema_up(&cw->sema);
+    break;
+  }
+}
+lock_release(&child_wait_lock);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -226,7 +306,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char **args;
   int argcount = 0;
   
-  printf("in load\n");
+
   fncopy = (char *) malloc( (strlen(file_name) + 1)  );
   args = (char **) malloc( 10 * sizeof(char *) );
   if (fncopy == NULL)
@@ -240,7 +320,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
   /*SEA+ tokenize file_name */
   fname = strtok_r(fncopy," ",&save_ptr);
-  printf("fname %s\n",fname);
+
   for (args[argcount] = strtok_r (NULL, " ", &save_ptr);
        args[argcount] != NULL;
        args[argcount] = strtok_r (NULL, " ", &save_ptr)) {
@@ -347,8 +427,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
-  if (success) printf("proc success\n"); //+SEA
-  else printf("proc failure\n");
+
   return success;
 }
 
@@ -525,7 +604,7 @@ setup_stack (void **esp, char *fname, char** args, int argcount)
         *(int*)*esp = (uint32_t) 0; // fake return address
 
         //printf("num bytes %d\n",PHYS_BASE - *esp);
-        hex_dump(*esp,*esp,(int)(PHYS_BASE - *esp),true);
+        //hex_dump(*esp,*esp,(int)(PHYS_BASE - *esp),true);
 
       }
       else
