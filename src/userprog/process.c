@@ -56,6 +56,7 @@ process_execute (const char *file_name)
   child->pid = tid;
   child->exit_status = 0;
   child->running = true;
+  sema_init(&child->wait_sema, 0);
   
   /* Add to current thread's (parent's) children list SK*/
   list_push_back(&thread_current()->children, &child->elem);

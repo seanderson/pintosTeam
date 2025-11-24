@@ -29,7 +29,9 @@ struct child_thread {
   tid_t pid; // thread id
   int exit_status; // status on exit for kernel/wait
   bool running; // is thread running?
-  struct list_elem elem;   
+  struct list_elem elem;
+  struct semaphore wait_sema;   //Parent must wait on child thread SK
+
 };
 /* A kernel thread or user process.
 
