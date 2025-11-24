@@ -18,9 +18,36 @@
 #include "threads/malloc.h" //+SEA
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+
+
+
+static struct list child_wait_list;
+static struct lock child_wait_lock;
+static bool cw_initialized = false;
+
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+
+// Yo, Misha, Zuhayr, Hameed, Kate, Shiraz and Arlo, I figured what happened was 
+// that before the child could start, parents never had the chance to keep track of it
+static void
+child_wait_init_if_needed(void) {
+  if (!cw_initialized) {
+    lock_init(&child_wait_lock);
+    list_init(&child_wait_list);
+    cw_initialized = true;
+  }
+}
+
+// I also fix Kate's write function thingy 🫩 and is using her older syscall.c for this src
+// But I noticed shiraz didn't add exit_status in struct thread
+// So I added that (his was probably using a newer release from Kate)
+
+// I made some changes to thread.c and timer.c.
+
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -31,7 +58,7 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-  printf("\nin proc execute\n");
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -41,6 +68,23 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  
+  child_wait_init_if_needed(); // Why should child wait for initialization????????
+
+  // Initialize a new struct child_wait to start tracking this child thread.
+  struct child_wait *cw = malloc(sizeof *cw);
+  cw->child_tid = tid;
+  cw->parent_tid = thread_current()->tid;
+  sema_init(&cw->sema, 0);
+  cw->exit_status = -1;
+  cw->waited = false;
+
+  // Safely add child to global
+  lock_acquire(&child_wait_lock);
+  list_push_back(&child_wait_list, &cw->elem);
+  lock_release(&child_wait_lock);
+
+  
   if (tid == TID_ERROR) {
     printf("thread creation failed.\n");
     palloc_free_page (fn_copy);
@@ -89,18 +133,74 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait(tid_t child_tid)
 {
-  while (true) ; //SEA
-  return -1;
+  // child HAS to be initialized
+  child_wait_init_if_needed();
+
+  struct child_wait *cw = NULL;
+  struct list_elem *e;
+
+  // Search for child in global
+  lock_acquire(&child_wait_lock);
+  for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
+    struct child_wait *cur = list_entry(e, struct child_wait, elem);
+    if (cur->child_tid == child_tid &&
+        cur->parent_tid == thread_current()->tid) {
+      cw = cur;
+      break;
+    }
+  }
+
+  // Return -1 if child not found
+  if (cw == NULL || cw->waited) {
+    lock_release(&child_wait_lock);
+    return -1;
+  }
+
+  // Signify that the parent is NOW waiting on the child
+  cw->waited = true;
+  lock_release(&child_wait_lock);
+
+  // Wait for child to say that it has finished
+  sema_down(&cw->sema);
+
+  // After child exits, get its exit status and remove from list  
+  lock_acquire(&child_wait_lock);
+  int status = cw->exit_status;
+  list_remove(&cw->elem);
+  lock_release(&child_wait_lock);
+
+  // Give peace to the child thread
+  free(cw);
+  return status;
 }
+
 
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
+  // current thread
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  // Notify parent that this child exist now 
+  lock_acquire(&child_wait_lock);
+  
+  // Go through list to find entry for this thread
+  struct list_elem *e;
+  for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
+  struct child_wait *cw = list_entry(e, struct child_wait, elem);
+  
+  // Store the status and signal parent that the child has finished
+  if (cw->child_tid == thread_current()->tid) {
+    cw->exit_status = thread_current()->exit_status;
+    sema_up(&cw->sema);
+    break; // We only need one child
+  }
+}
+lock_release(&child_wait_lock);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -226,7 +326,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char **args;
   int argcount = 0;
   
-  printf("in load\n");
+
   fncopy = (char *) malloc( (strlen(file_name) + 1)  );
   args = (char **) malloc( 10 * sizeof(char *) );
   if (fncopy == NULL)
@@ -240,7 +340,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
   /*SEA+ tokenize file_name */
   fname = strtok_r(fncopy," ",&save_ptr);
-  printf("fname %s\n",fname);
+
   for (args[argcount] = strtok_r (NULL, " ", &save_ptr);
        args[argcount] != NULL;
        args[argcount] = strtok_r (NULL, " ", &save_ptr)) {
@@ -347,8 +447,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
-  if (success) printf("proc success\n"); //+SEA
-  else printf("proc failure\n");
+
   return success;
 }
 
@@ -525,7 +624,7 @@ setup_stack (void **esp, char *fname, char** args, int argcount)
         *(int*)*esp = (uint32_t) 0; // fake return address
 
         //printf("num bytes %d\n",PHYS_BASE - *esp);
-        hex_dump(*esp,*esp,(int)(PHYS_BASE - *esp),true);
+        //hex_dump(*esp,*esp,(int)(PHYS_BASE - *esp),true);
 
       }
       else
@@ -552,4 +651,4 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
-}
+}// Add the child_wait structure to the global list safely

@@ -9,9 +9,9 @@
 
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
-void s_exit ();
+void s_exit (int status);
 void s_halt ();
-void s_write(void *sp);
+void s_write(struct intr_frame *f);
 static bool verify_user (const uint8_t *uaddr);
 
 void
@@ -24,24 +24,23 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf ("system call!\n");
+
   // Extract system call number from stack.
   if (!verify_user(f->esp)) {
     printf("ERROR.  Bad user address.\n");
     thread_exit();
   }
   int call_num = (int) *(int *)(f->esp);
-  printf("Call num %d\n",call_num);
+
   switch (call_num) {
     case SYS_HALT:
     printf("Sys halt\n");
     s_halt();
     break;
   case SYS_EXIT:
-    printf ("Sys exit detected.\n");
-    printf("Status: %d\n", (int) *(int *)(f->esp + 4));
+
     f->eax = (int) *(int *)(f->esp + 4); // set return value
-    s_exit ();
+    s_exit (f->eax);
     break;
   case SYS_EXEC:
     break;
@@ -58,8 +57,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   case SYS_READ:
     break;
   case SYS_WRITE:
-    printf("Sys write\n");
-    s_write(f->esp);
+    s_write(f);
     break;
   case SYS_SEEK:
     break;
@@ -70,11 +68,11 @@ syscall_handler (struct intr_frame *f UNUSED)
   default:
     printf("Sys call is unknown!!\n");
   }
-  thread_exit ();
-}
+} // I removed the thread_exit() here. Wouldn't make sense if 
 
-void s_exit () {
-  printf("got to sysexit\n");
+void s_exit (int status) {
+  printf("%s: exit(%d)\n", thread_current()->name, status);
+  thread_current()->exit_status = status;
   thread_exit();
 }
 
@@ -83,12 +81,22 @@ void s_halt () {
   shutdown_power_off();
 }
 
-void s_write(void *sp) {
-  char *buf = (char *)(sp + 12);
-  int n = (int)(int *)(sp + 8);
-  printf("num %d\n",n);
+void s_write(struct intr_frame *f) {
+  int fd = *(int *)(f->esp + 4);
+  char *buf = *(char **)(f->esp + 8);
+  int size = *(int *)(f->esp + 12);
 
-  //putbuf (buf,n);
+  if (!verify_user((uint8_t *)buf)) {
+    s_exit(fd);
+  }
+
+  if (fd == 1) {           // stdout
+    putbuf(buf, size);
+    f->eax = size;
+    return; // Return here, not outside of if
+  }
+
+  f->eax = 0;
 }
 
 /* Validate data user virtual address uaddr.
@@ -101,8 +109,5 @@ void s_write(void *sp) {
 static bool 
 verify_user (const uint8_t *uaddr)
 {
-  int result;
-  if (uaddr == NULL || uaddr >= PHYS_BASE) return false;
-  // is it mapped?  How do I check this?
-  return true;
+  return (uaddr != NULL && uaddr < PHYS_BASE);
 }
