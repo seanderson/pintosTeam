@@ -5,4 +5,6 @@ pintos -p ../../examples/mytest1 -a mytest1 -- -q
 pintos -p ../../examples/echo.c -a echo.c -- -q
 pintos -p ../../examples/echo -a echo -- -q
 pintos -p ../../examples/cat -a cat -- -q
+pintos -p ../../examples/mytest.c -a mytest.c -- -q
+pintos -p ../../examples/mytest -a mytest -- -q
 pintos -q ls

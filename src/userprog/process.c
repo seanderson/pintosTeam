@@ -45,7 +45,40 @@ process_execute (const char *file_name)
     printf("thread creation failed.\n");
     palloc_free_page (fn_copy);
   }
+
+  /* Create child_thread structure and add to parent's children list SK*/
+  struct child_thread *child = malloc(sizeof(struct child_thread));
+  if (child == NULL) {
+    printf("child_thread allocation failed.\n");
+    return tid;  
+  }
+  
+  child->pid = tid;
+  child->exit_status = 0;
+  child->running = true;
+  
+  /* Add to current thread's (parent's) children list SK*/
+  list_push_back(&thread_current()->children, &child->elem);
+
   return tid;
+}
+
+//Helper method for finding child thread and then creating child_info SK
+static void
+set_child_info(tid_t tid, struct child_thread *info)
+{
+  struct thread *t;
+  struct list_elem *e;
+  
+  /* Search through all threads to find matching tid */
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    t = list_entry(e, struct thread, allelem);
+    if (t->tid == tid) {
+      t->my_child_info = info;
+      return;
+    }
+  }
 }
 
 /* A thread function that loads a user process and starts it
@@ -98,7 +131,7 @@ process_wait (tid_t child_tid UNUSED)
 
 /* Free the current process's resources. */
 void
-process_exit (void)
+process_exit (void)		//this should take an exit status SK
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;

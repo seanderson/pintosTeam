@@ -92,12 +92,14 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  //list_init (&child_threads); //SK
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -197,6 +199,12 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+
+  // TODO
+  // make this thread a child thread of the current process
+  // add it to child_threads list
+  list_init(&t->children);
+  t->my_child_info = NULL;
 
   /* Add to run queue. */
   thread_unblock (t);

@@ -29,7 +29,7 @@ struct child_thread {
   tid_t pid; // thread id
   int exit_status; // status on exit for kernel/wait
   bool running; // is thread running?
-  struct list_elem elem;
+  struct list_elem elem;   
 };
 /* A kernel thread or user process.
 
@@ -96,6 +96,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    struct list children;              /* List of struct child_thread SK*/
+    struct child_thread *my_child_info; /* Pointer to thread id in parent's list SK*/
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
