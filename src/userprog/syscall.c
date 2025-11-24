@@ -6,6 +6,7 @@
 #include "threads/vaddr.h"
 //+SEA
 #include "devices/shutdown.h"
+#include "userprog/pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
@@ -13,43 +14,49 @@ void s_exit ();
 void s_halt ();
 int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
+static bool verify_buf_ptr(const uint8_t *buffer, size_t size);
 
-void
-syscall_init (void) 
+void syscall_init(void)
 {
-  intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
-  //intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
+  intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
+  // intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
 }
 
 static void get_arg(struct intr_frame *f, int *args, int n) {
-    int *sp = (int *) f->esp;
+    int *sp = (int *)f->esp;
 
     for (int i = 0; i < n; i++) {
+        //Check if the stack pointer is safe 
+        if (!verify_user(((uint8_t *)&sp[i + 1]))){
+           s_exit();
+        }
         args[i] = sp[i + 1];
     }
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler(struct intr_frame *f UNUSED)
 {
-  printf ("system call!\n");
+  printf("system call!\n");
   // Extract system call number from stack.
-  if (!verify_user(f->esp)) {
+  if (!verify_user(f->esp))
+  {
     printf("ERROR.  Bad user address.\n");
     thread_exit();
   }
-  int call_num = (int) *(int *)(f->esp);
-  printf("Call num %d\n",call_num);
-  switch (call_num) {
-    case SYS_HALT:
+  int call_num = (int)*(int *)(f->esp);
+  printf("Call num %d\n", call_num);
+  switch (call_num)
+  {
+  case SYS_HALT:
     printf("Sys halt\n");
     s_halt();
     break;
   case SYS_EXIT:
-    printf ("Sys exit detected.\n");
-    printf("Status: %d\n", (int) *(int *)(f->esp + 4));
-    f->eax = (int) *(int *)(f->esp + 4); // set return value
-    s_exit ();
+    printf("Sys exit detected.\n");
+    printf("Status: %d\n", (int)*(int *)(f->esp + 4));
+    f->eax = (int)*(int *)(f->esp + 4); // set return value
+    s_exit();
     break;
   case SYS_EXEC:
     break;
@@ -87,12 +94,14 @@ syscall_handler (struct intr_frame *f UNUSED)
   //thread_exit ();
 }
 
-void s_exit () {
+void s_exit()
+{
   printf("got to sysexit\n");
   thread_exit();
 }
 
-void s_halt () {
+void s_halt()
+{
   printf("got to syshalt\n");
   shutdown_power_off();
 }
@@ -104,16 +113,36 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // int fd = *(int *)(sp + 4);
   printf("num %d\n",n);
   printf("fd %d\n", pr_fd);
-  
-  // Needed from HA: Need working verify_user/verify_buf_ptr 
 
+  // Needed from HA: Need working verify_user/verify_buf_ptr 
+  // Needed from SK: Need s_exit 
+  if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
+    s_exit();
+  }
+
+  // Write to stdout
   if (pr_fd == 1) {
-    putbuf(pr_buf, n);
+
+    putbuf(pr_buf, n); // prints n bytes from buffer to the stdout 
     return n; 
   }
 
   return -1;
 }
+
+/*
+Virtual Memory Layout:
+
+virtual memory in pintos devided in two regions: user virtual memory (0 up to PHYS_BASE (3GB)) and kernel virtual memory(PHYS_BASE up to 4GB). User virtual memory is per-process. when the kernel switches from one process to another, it also switches user virtual address spaces by changing processor's page directory base register. Kernel virtual memory is global. It is always mapped the same way, regardless of what user process or kernel thread is running. A user program can only access its own virtual memory, any attempt to access kernel virtual memory causes a page fault. Kernel can access both its own virtual memory and virtual memory of a running user process. However even in kernel an attempt to access memory of an unmapped user virtual address will cause page fault.
+
+
+
+Need for checking:
+As part a system call, the kernel must often access memory through pointers provided by the user program. The user could pass a null pointer, a pointer to unmapped virtual memory or a pointer to kernel virtual memory space. All mentioned pointers are harmful to kernel an could cause crush and pagefault, basically by checking we make sure that the pointers are valid and will not harm the kernel.
+
+Pintos: chap3: 3.1.4 - 3.1.5
+
+*/
 
 /* Validate data user virtual address uaddr.
    UADDR must be below PHYS_BASE.
@@ -122,11 +151,44 @@ int s_write(int pr_fd, char *pr_buf, int n) {
    Returns true if successful, false if not.
    +SEA
 */
-static bool 
-verify_user (const uint8_t *uaddr)
+static bool
+verify_user(const uint8_t *uaddr)
 {
   int result;
-  if (uaddr == NULL || uaddr >= PHYS_BASE) return false;
+  // if (uaddr == NULL || uaddr >= PHYS_BASE)
+  //   return false;
   // is it mapped?  How do I check this?
+  // to check if the address is mapped if not return false
+
+  // to check pointer is not null
+  if (uaddr == NULL)
+  {
+    return false;
+  }
+  // to check the VADDR is user virtual address
+  if (!is_user_vaddr(uaddr))
+    return false;
+  // retuns false if the address in not mapped
+  return pagedir_get_page(thread_current()->pagedir, uaddr) != NULL;
+}
+
+/*
+ Validate that all memory addresses in the buffer is valid
+ and ensures it comes from user memory space and mapped to
+ a valid physical space. RETURN true if all elements in buffer
+ comes from user memory space and mapped.RETURN false if that
+ condition is not meet.
+ */
+static bool
+verify_buf_ptr(const uint8_t *buffer, size_t size)
+{
+  for (size_t i = 0; i < size; i++)
+  {
+    if ( !verify_user(buffer + i)/*!is_user_vaddr(buffer + i)*/)
+    {
+      return false;
+    }
+  }
+
   return true;
 }
