@@ -23,7 +23,6 @@
 
 
 static struct list child_wait_list;
-static struct lock child_wait_lock;
 static bool cw_initialized = false;
 
 
@@ -32,16 +31,16 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 
 // Yo, Misha, Zuhayr, Hameed, Kate, Shiraz and Arlo, I figured what happened was 
-// that before the child could start, parents never had the chance to keep track of it
+// that parent never had the chance to keep track of the threads because it was initialized AGAIN
 static void
-child_wait_init_if_needed(void) {
+initialize_if_needed(void) {
   if (!cw_initialized) {
-    lock_init(&child_wait_lock);
     list_init(&child_wait_list);
     cw_initialized = true;
   }
 }
 
+// We also don't need locks
 // I also fix Kate's write function thingy 🫩 and is using her older syscall.c for this src
 // But I noticed shiraz didn't add exit_status in struct thread
 // So I added that (his was probably using a newer release from Kate)
@@ -69,21 +68,18 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   
-  child_wait_init_if_needed(); // Why should child wait for initialization????????
+  initialize_if_needed(); // Child list matters
 
   // Initialize a new struct child_wait to start tracking this child thread.
   struct child_wait *cw = malloc(sizeof *cw);
   cw->child_tid = tid;
   cw->parent_tid = thread_current()->tid;
-  sema_init(&cw->sema, 0);
   cw->exit_status = -1;
   cw->waited = false;
 
-  // Safely add child to global
-  lock_acquire(&child_wait_lock);
   list_push_back(&child_wait_list, &cw->elem);
-  lock_release(&child_wait_lock);
 
+  sema_init(&cw->sema, 0);
   
   if (tid == TID_ERROR) {
     printf("thread creation failed.\n");
@@ -135,14 +131,13 @@ start_process (void *file_name_)
 int
 process_wait(tid_t child_tid)
 {
-  // child HAS to be initialized
-  child_wait_init_if_needed();
+  // child list HAS to be initialized
+  initialize_if_needed();
 
   struct child_wait *cw = NULL;
   struct list_elem *e;
 
   // Search for child in global
-  lock_acquire(&child_wait_lock);
   for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
     struct child_wait *cur = list_entry(e, struct child_wait, elem);
     if (cur->child_tid == child_tid &&
@@ -154,22 +149,19 @@ process_wait(tid_t child_tid)
 
   // Return -1 if child not found
   if (cw == NULL || cw->waited) {
-    lock_release(&child_wait_lock);
     return -1;
   }
 
   // Signify that the parent is NOW waiting on the child
   cw->waited = true;
-  lock_release(&child_wait_lock);
+
 
   // Wait for child to say that it has finished
   sema_down(&cw->sema);
 
   // After child exits, get its exit status and remove from list  
-  lock_acquire(&child_wait_lock);
   int status = cw->exit_status;
   list_remove(&cw->elem);
-  lock_release(&child_wait_lock);
 
   // Give peace to the child thread
   free(cw);
@@ -185,9 +177,7 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-  // Notify parent that this child exist now 
-  lock_acquire(&child_wait_lock);
-  
+  // Notify parent that this child exit now 
   // Go through list to find entry for this thread
   struct list_elem *e;
   for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
@@ -200,7 +190,6 @@ process_exit (void)
     break; // We only need one child
   }
 }
-lock_release(&child_wait_lock);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
