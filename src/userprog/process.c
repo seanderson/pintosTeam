@@ -31,7 +31,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
 
 // Yo, Misha, Zuhayr, Hameed, Kate, Shiraz and Arlo, I figured what happened was 
-// that parent never had the chance to keep track of the threads because it was initialized AGAIN
+// that parent never had the chance to properly keep track of the threads because it was initialized AGAIN
 static void
 initialize_if_needed(void) {
   if (!cw_initialized) {
