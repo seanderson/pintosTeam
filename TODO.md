@@ -23,17 +23,17 @@
 - [ ] bad-write2:	
 - [ ] bad-write:	
 - [ ] close-bad-fd:	
-- [ ] close-normal:	
-- [ ] close-stdin:	
-- [ ] close-stdout:	
+- [ ] close-normal:	close an opened file
+- [ ] close-stdin:	try to close stdin; should fail
+- [ ] close-stdout:	try to close stdout; should fail
 - [ ] close-twice:	
-- [ ] create-bad-ptr:	
+- [ ] create-bad-ptr:	create file will bad ptr; should fail exit==-1
 - [ ] create-bound:	
-- [ ] create-empty:	
-- [ ] create-exists:	
-- [ ] create-long:	
-- [ ] create-normal:	
-- [ ] create-null:	
+- [ ] create-empty:	create file with "" as filename; should it succeed?
+- [ ] create-exists:	try to create filename that exists; should file
+- [ ] create-long:	try to create with too long fileame; fails with exit==-1
+- [ ] create-normal:	usual creation
+- [ ] create-null:	create file will null ptr; should fail exit==-1
 - [ ] exec-arg:		
 - [ ] exec-bad-ptr:	
 - [ ] exec-bound-2:	
@@ -42,8 +42,8 @@
 - [ ] exec-missing:	
 - [ ] exec-multiple:	
 - [ ] exec-once:	
-- [ ] exit:		
-- [ ] halt:		
+- [ ] exit:	terminate current user program; returns status arg to kernel (0 for success)
+- [ ] halt:	shutdown pintos; may lose state info
 - [ ] multi-child-fd:	
 - [ ] multi-recurse:	
 - [ ] null:
