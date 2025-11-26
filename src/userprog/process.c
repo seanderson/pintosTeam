@@ -136,7 +136,16 @@ process_wait(tid_t child_tid)
 
   struct child_wait *cw = NULL;
   struct list_elem *e;
-
+	/*
+	*We iterate through all child_wait structures 
+    *and look for one whose child_tid matches the tid
+    *passed to process_wait(), and whose parent_tid matches the
+    *current thread.
+	*This is important as it will make sure that 
+	*the calling process can only wait on its *own* children.
+	*If no matching entry is found, or the child was already waited on,
+    *process_wait() will return -1.
+	*/
   lock_acquire(&child_wait_lock);
   for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
     struct child_wait *cur = list_entry(e, struct child_wait, elem);
