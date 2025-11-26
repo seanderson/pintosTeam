@@ -21,14 +21,19 @@
 // Trish put child wait in here to make it easier;
 #include "threads/synch.h"
 // Misha and Trish worked on this file;
-
+/*
+*Records information from child that a parent thread created; It creates a child_wait when 
+*it creates a child; This structure makes the parent wait for a specific child to make sure
+*there is no double-waiting; 
+*/
 struct child_wait {
-  tid_t child_tid;
-  tid_t parent_tid;
-  struct semaphore sema;
-  int exit_status;
-  bool waited;
-  struct list_elem elem;
+  tid_t child_tid;				//child thread id
+  tid_t parent_tid;				//parent thread id
+  //parent calls sema_down(&wait_sema) in process_wait(); child calls sema_up(&wait_sema) in process_exit() after setting exit_status.
+  struct semaphore wait_sema;   //signaled by child on exit (parent doesnt)
+  int exit_status;				//value set on child exit
+  bool waited;					//True statement if parent already called process_wait()
+  struct list_elem elem;		//link into child_wait_list()
 };
 
 static struct list child_wait_list;
