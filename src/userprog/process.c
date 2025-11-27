@@ -46,7 +46,7 @@ process_execute (const char *file_name)
     palloc_free_page (fn_copy);
   }
 
-  /* Create child_thread structure and add to parent's children list SK*/
+  // create child_thread structure and add to parent's children list SK
   struct child_thread *child = malloc(sizeof(struct child_thread));
   if (child == NULL) {
     printf("child_thread allocation failed.\n");
@@ -58,7 +58,7 @@ process_execute (const char *file_name)
   child->running = true;
   sema_init(&child->wait_sema, 0);
   
-  /* Add to current thread's (parent's) children list SK*/
+  // Add to current thread's (parent's) children list SK
   list_push_back(&thread_current()->children, &child->elem);
 
   return tid;
@@ -123,19 +123,64 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
 	//process_wait should receive exit status via process_exit somehow SK
-  while (true) ; //SEA
-  return -1;
+	struct thread *cur = thread_current();
+	struct child_thread *child = NULL;
+
+	// find child in children list 
+	struct list_elem *e;
+	for (e = list_begin(&cur->children); 
+	   e != list_end(&cur->children);
+	   e = list_next(e))
+	{
+		struct child_thread *c = list_entry(e, struct child_thread, elem);
+		if (c->pid == child_tid) {
+			child = c;
+			break;
+		}
+	}
+
+	// if child not found - not our child or invalid tid
+	if (child == NULL)
+		return -1;
+
+	// Wait for child to exit 
+	sema_down(&child->wait_sema);
+
+	// Get exit status 
+	int status = child->exit_status;
+
+	// Remove from list and free 
+	list_remove(&child->elem);
+	free(child);
+
+	return status;
 }
 
 /* Free the current process's resources. */
 void
-process_exit (void)		//this should take an exit status SK
+process_exit (int status)		//this should take an exit status SK
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  printf("%s: exit(%d)\n", thread_name(), status);
+  
+  // update my info in parent's list SK
+  if (cur->my_child_info != NULL) {
+    cur->my_child_info->exit_status = status;
+    cur->my_child_info->running = false;
+    sema_up(&cur->my_child_info->wait_sema);  // wake parent SK
+  }
+  
+  // free all child_thread structures (orphan children) SK
+  while (!list_empty(&cur->children)) {
+    struct list_elem *e = list_pop_front(&cur->children);
+    struct child_thread *child = list_entry(e, struct child_thread, elem);
+    free(child);
+  }
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
