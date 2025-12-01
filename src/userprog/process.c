@@ -76,7 +76,7 @@ process_execute (const char *file_name)
   struct child_wait *cw = malloc(sizeof *cw);
   cw->child_tid = tid;
   cw->parent_tid = thread_current()->tid;
-  sema_init(&cw->sema, 0);
+  sema_init(&cw->wait_sema, 0);
   cw->exit_status = -1;
   cw->waited = false;
 
@@ -166,7 +166,7 @@ process_wait(tid_t child_tid)
   cw->waited = true;
   lock_release(&child_wait_lock);
 
-  sema_down(&cw->sema);
+  sema_down(&cw->wait_sema);;
 
   lock_acquire(&child_wait_lock);
   int status = cw->exit_status;
@@ -191,7 +191,7 @@ for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list
   struct child_wait *cw = list_entry(e, struct child_wait, elem);
   if (cw->child_tid == thread_current()->tid) {
     cw->exit_status = thread_current()->exit_status;
-    sema_up(&cw->sema);
+    sema_up(&cw->wait_sema);
     break;
   }
 }
