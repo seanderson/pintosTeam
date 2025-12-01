@@ -55,6 +55,11 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
+  if (!cw_initialized) {
+    list_init(&child_wait_list);
+    lock_init(&child_wait_lock);
+    cw_initialized = true;
+}
   char *fn_copy;
   tid_t tid;
 
@@ -67,8 +72,6 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  
-  list_init(&child_wait_list);
 
   struct child_wait *cw = malloc(sizeof *cw);
   cw->child_tid = tid;
@@ -132,7 +135,6 @@ start_process (void *file_name_)
 int
 process_wait(tid_t child_tid)
 {
-  list_init(&child_wait_list);
 
   struct child_wait *cw = NULL;
   struct list_elem *e;
@@ -182,8 +184,7 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
-list_init(&child_wait_list);
+	
 lock_acquire(&child_wait_lock);
 struct list_elem *e;
 for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
