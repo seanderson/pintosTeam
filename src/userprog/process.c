@@ -193,8 +193,8 @@ struct list_elem *e;
 for (e = list_begin(&child_wait_list); e != list_end(&child_wait_list); e = list_next(e)) {
   struct child_wait *cw = list_entry(e, struct child_wait, elem);
   if (cw->child_tid == thread_current()->tid) {
-    cw->exit_status = thread_current()->exit_status;
-    sema_up(&cw->wait_sema);
+    cw->exit_status = cur->exit_status;
+	sema_up(&cw->wait_sema);
     break;
   }
 }
