@@ -37,12 +37,8 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
     for (int i = 0; i < n; i++) {
         // Verify the address is in valid user memory
         if (!verify_user(((uint8_t *)&sp[i + 1]))){
-<<<<<<< HEAD
-           s_exit();
-=======
           f->eax = (int)*(int *)(f->esp + 4); 
            s_exit(f->eax);
->>>>>>> TT---ArgNone
         }
         
         // Get the argument and store it
@@ -53,28 +49,6 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-<<<<<<< HEAD
-  printf("system call!\n");
-  // Extract system call number from stack.
-  if (!verify_user(f->esp))
-  {
-    printf("ERROR.  Bad user address.\n");
-    thread_exit();
-  }
-  int call_num = (int)*(int *)(f->esp);
-  printf("Call num %d\n", call_num);
-  switch (call_num)
-  {
-  case SYS_HALT:
-    printf("Sys halt\n");
-    s_halt();
-    break;
-  case SYS_EXIT:
-    printf("Sys exit detected.\n");
-    printf("Status: %d\n", (int)*(int *)(f->esp + 4));
-    f->eax = (int)*(int *)(f->esp + 4); // set return value
-    s_exit();
-=======
 
   // Extract system call number from stack.
   if (!verify_user(f->esp))
@@ -95,7 +69,6 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     f->eax = (int)*(int *)(f->esp + 4); // set return value
     s_exit(f->eax);
->>>>>>> TT---ArgNone
     break;
   case SYS_EXEC:
     break;
@@ -120,22 +93,12 @@ syscall_handler(struct intr_frame *f UNUSED)
      char *buf = (char *) args[1];
      int n   = args[2];
 
-<<<<<<< HEAD
-    printf("Sys write\n");
-    printf("size %d\n", n);
-    printf("fd %d\n", fd);
-=======
 
->>>>>>> TT---ArgNone
 
      // Set the return value that the user program will see
      f->eax = s_write(fd, buf, n);
 
-<<<<<<< HEAD
-     printf("Sys write returned: %d\n", f->eax);
-=======
 
->>>>>>> TT---ArgNone
     //s_write(f);
     break;
   case SYS_SEEK:
@@ -150,27 +113,17 @@ syscall_handler(struct intr_frame *f UNUSED)
   //thread_exit ();
 }
 
-<<<<<<< HEAD
-void s_exit()
-{
-  printf("got to sysexit\n");
-=======
 void s_exit(int status)
 {
 
   printf("%s: exit(%d)\n", thread_current()->name, status);
   thread_current()->exit_status = status;
->>>>>>> TT---ArgNone
   thread_exit();
 }
 
 void s_halt()
 {
-<<<<<<< HEAD
-  printf("got to syshalt\n");
-=======
 
->>>>>>> TT---ArgNone
   shutdown_power_off();
 }
 
@@ -183,21 +136,12 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // char *buf = *(char **)(sp + 8);
   // int n = *(int *)(sp + 12);
   // int fd = *(int *)(sp + 4);
-<<<<<<< HEAD
-  printf("num %d\n",n);
-  printf("fd %d\n", pr_fd);
-
-  // Verify buffer is in valid user memory
-  if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
-    s_exit();
-=======
 
 
   // Verify buffer is in valid user memory
   if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
     
     s_exit(-1);
->>>>>>> TT---ArgNone
   }
 
   // Write to stdout
