@@ -54,6 +54,22 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_REMOVE:
     break;
   case SYS_OPEN:
+    // arr for storing 1 element
+    int args[1];
+    get_arg(f, args, 1);
+    char *fileName = (char *)args[0];
+    // if its empty exit == -1
+    if (fileName[0] == '\0')
+    {
+      // exit == -1;
+      break;
+    }
+    // to check the existence of file with given fileName
+    struct file *fileCheck = filesys_open(fileName);
+    if (fileCheck == NULL)
+    {
+      // exit ==-1
+    }
     break;
   case SYS_FILESIZE:
     break;
