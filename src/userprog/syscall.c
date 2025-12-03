@@ -10,7 +10,7 @@
 
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
-void s_exit ();
+void s_exit (int status);
 void s_halt ();
 int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
@@ -37,7 +37,8 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
     for (int i = 0; i < n; i++) {
         // Verify the address is in valid user memory
         if (!verify_user(((uint8_t *)&sp[i + 1]))){
-           s_exit();
+          f->eax = (int)*(int *)(f->esp + 4); 
+           s_exit(f->eax);
         }
         
         // Get the argument and store it
@@ -52,7 +53,7 @@ syscall_handler(struct intr_frame *f UNUSED)
   // Extract system call number from stack.
   if (!verify_user(f->esp))
   {
-    printf("ERROR.  Bad user address.\n");
+
     thread_exit();
   }
   int call_num = (int)*(int *)(f->esp);
@@ -67,7 +68,7 @@ syscall_handler(struct intr_frame *f UNUSED)
 
 
     f->eax = (int)*(int *)(f->esp + 4); // set return value
-    s_exit();
+    s_exit(f->eax);
     break;
   case SYS_EXEC:
     break;
@@ -94,8 +95,6 @@ syscall_handler(struct intr_frame *f UNUSED)
 
 
 
-
-
      // Set the return value that the user program will see
      f->eax = s_write(fd, buf, n);
 
@@ -114,9 +113,11 @@ syscall_handler(struct intr_frame *f UNUSED)
   //thread_exit ();
 }
 
-void s_exit()
+void s_exit(int status)
 {
 
+  printf("%s: exit(%d)\n", thread_current()->name, status);
+  thread_current()->exit_status = status;
   thread_exit();
 }
 
@@ -137,10 +138,10 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // int fd = *(int *)(sp + 4);
 
 
-
   // Verify buffer is in valid user memory
   if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
-    s_exit();
+    
+    s_exit(-1);
   }
 
   // Write to stdout
