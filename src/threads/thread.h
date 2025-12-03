@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -21,16 +22,10 @@ typedef int tid_t;
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
-#define PRI_DEFAULT 31                  /* Default priority. */
-#define PRI_MAX 63                      /* Highest priority. */
+#define PRI_DEFAULT 19                  /* Default priority. */
+#define PRI_MAX 19                      /* Highest priority. */
+#define boostInterval 50  // Boost period
 
-/*+SEA Added for user procs.*/
-struct child_thread {
-  tid_t pid; // thread id
-  int exit_status; // status on exit for kernel/wait
-  bool running; // is thread running?
-  struct list_elem elem;
-};
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -87,6 +82,18 @@ struct child_thread {
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+   
+  
+   
+struct child_wait {
+  tid_t child_tid;
+  tid_t parent_tid;
+  struct semaphore sema;
+  int exit_status;
+  bool waited;
+  struct list_elem elem;
+};
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -96,6 +103,13 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    
+    int mlfq_ticks;        
+    struct list_elem ready_elem;
+    int exit_status;
+    
+    int64_t whenTo;
+
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -104,7 +118,7 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
-    struct list child_threads; // child threads SEA
+
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
@@ -139,6 +153,7 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void boost(void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
