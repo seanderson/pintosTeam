@@ -330,6 +330,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /*SEA+ tokenize file_name */
   fname = strtok_r(fncopy," ",&save_ptr);
 
+  //store program name as first argument SK
+  args[0] = fname;
+  argcount = 1;
+
   for (args[argcount] = strtok_r (NULL, " ", &save_ptr);
        args[argcount] != NULL;
        args[argcount] = strtok_r (NULL, " ", &save_ptr)) {
@@ -427,6 +431,50 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp,fname,args,argcount))
     goto done;
+	
+	//SK start
+	void *arg_addresses[128];  // Store addresses of each arg on stack
+
+	// Push argument strings onto stack (right to left)
+	for (i = argcount - 1; i >= 0; i--)
+	{
+	int len = strlen(args[i]) + 1;  // +1 for null terminator
+	*esp -= len;
+	memcpy(*esp, args[i], len);
+	arg_addresses[i] = *esp;  // Save where this arg is on stack
+	}
+
+	// Word align to 4 bytes
+	int padding = (size_t)*esp % 4;
+	if (padding != 0)
+	{
+	*esp -= padding;
+	memset(*esp, 0, padding);
+	}
+
+	// Push null pointer sentinel (argv[argc] = NULL)
+	*esp -= 4;
+	*(int *)*esp = 0;
+
+	// Push pointers to arguments (right to left)
+	for (i = argcount - 1; i >= 0; i--)
+	{
+	*esp -= 4;
+	*(void **)*esp = arg_addresses[i];
+	}
+
+	// Push argv (pointer to argv[0])
+	void *argv_ptr = *esp;
+	*esp -= 4;
+	*(void **)*esp = argv_ptr;
+
+	// Push argc
+	*esp -= 4;
+	*(int *)*esp = argcount;
+
+	// Push fake return address
+	*esp -= 4;
+	*(int *)*esp = 0;
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -436,7 +484,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
-
+  if (fncopy != NULL)
+    free(fncopy);
+  if (args != NULL)
+    free(args);
+  file_close (file);
   return success;
 }
 
