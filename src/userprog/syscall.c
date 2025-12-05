@@ -103,9 +103,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     unsigned initial_size = (unsigned)s_args[1];
 
     // Check if the filename address is valid
-    if (!verify_user((uint8_t *)fname)) {
-        s_exit(-1);
-    }
+    check_invalid_string_error(fname);
 
     // Create a file 
     f->eax = filesys_create(fname, initial_size);
@@ -117,6 +115,9 @@ syscall_handler(struct intr_frame *f UNUSED)
     // arr for storing 1 element
     get_arg(f, (int *)s_args, 1);
     fname = (char *)s_args[0];
+
+    // Check if the filename address is valid
+    check_invalid_string_error(fname);
 
     // if its empty exit == -1
     if (fname[0] == '\0'){
@@ -148,7 +149,40 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_FILESIZE:
     break;
   case SYS_READ:
+    get_arg(f, (int *)s_args, 3);
+    int read_fd = (int)s_args[0];
+    char *read_buf = (char *)s_args[1];
+    int read_size = (int)s_args[2];
+
+    // Check if buffer works
+    if (!verify_buf_ptr((uint8_t *)read_buf, read_size)) {
+          s_exit(-1);
+    }
+
+    if (read_fd == 1){
+       f->eax = -1;
+       break;
+    }
+
+    // Read from stdin
+    if (read_fd == 0) {
+      for (int i = 0; i < read_size; i++) {
+          read_buf[i] = input_getc();
+      }
+      f->eax = read_size;
+      break;
+    }
+
+    // Read from file
+    if (read_fd >= 2 && read_fd < FD_TABLE_SIZE){
+      if(fd_table[read_fd] != NULL){
+        f->eax = file_read(fd_table[read_fd], read_buf, read_size);
+        break;
+      }
+    }
+   
     break;
+
   case SYS_WRITE:
     
     // Extract fd, buffer, size arguments from user stack
