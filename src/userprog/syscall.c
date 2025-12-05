@@ -7,6 +7,8 @@
 //+SEA
 #include "devices/shutdown.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
@@ -16,10 +18,17 @@ int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
 static bool verify_buf_ptr(const uint8_t *buffer, size_t size);
 
+#define FD_TABLE_SIZE 30
+
+struct file *fd_table[FD_TABLE_SIZE];
+
 void syscall_init(void)
 {
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
   // intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
+   for (int i = 0; i < FD_TABLE_SIZE; i++){
+    fd_table[i] = NULL;
+   }
 }
 
 /* Gets n arguments from the user stack and stores them in the args array.
@@ -35,7 +44,7 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
     int *sp = (int *)f->esp;
 
     for (int i = 0; i < n; i++) {
-        // Verify the address is in valid user memory
+        // Verify the stack pointer address is valid 
         if (!verify_user(((uint8_t *)&sp[i + 1]))){
           f->eax = (int)*(int *)(f->esp + 4); 
            s_exit(f->eax);
@@ -49,24 +58,24 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-
+  //printf("system call!\n");
   // Extract system call number from stack.
   if (!verify_user(f->esp))
   {
-
+    printf("ERROR.  Bad user address.\n");
     thread_exit();
   }
   int call_num = (int)*(int *)(f->esp);
-
+  //printf("Call num %d\n", call_num);
   switch (call_num)
   {
   case SYS_HALT:
-
+    //printf("Sys halt\n");
     s_halt();
     break;
   case SYS_EXIT:
-
-
+    //printf("Sys exit detected.\n");
+    //printf("Status: %d\n", (int)*(int *)(f->esp + 4));
     f->eax = (int)*(int *)(f->esp + 4); // set return value
     s_exit(f->eax);
     break;
@@ -75,10 +84,56 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_WAIT:
     break;
   case SYS_CREATE:
+    
+    int args_syscreate[2];
+    get_arg(f, args_syscreate, 2);
+
+    char *file = (char *)args_syscreate[0];
+    unsigned initial_size = (unsigned)args_syscreate[1];
+
+    // Check if the filename address is valid
+    if (!verify_user((uint8_t *)file)) {
+        s_exit(-1);
+    }
+
+    // Create a file 
+    f->eax = filesys_create(file, initial_size);
     break;
   case SYS_REMOVE:
     break;
   case SYS_OPEN:
+  
+    // arr for storing 1 element
+    int args_sysopen[1];
+    get_arg(f, args_sysopen, 1);
+    char *fileName = (char *)args_sysopen[0];
+    // if its empty exit == -1
+    if (fileName[0] == '\0')
+    {
+      // exit == -1;
+      break;
+    }
+    
+    // Open the file 
+    struct file *file_pt = filesys_open(fileName);
+    
+    // to check the existence of file with given fileName
+    if (file_pt == NULL){
+      f->eax = -1;
+      break;
+    }
+
+    // Assign the file to the free fd
+    f->eax = -1;
+    for (int i = 2; i< FD_TABLE_SIZE; i++){
+      if(fd_table[i] == NULL){
+        fd_table[i] = file_pt;
+        f->eax = i;
+        break;
+
+      }
+    }
+
     break;
   case SYS_FILESIZE:
     break;
@@ -93,11 +148,8 @@ syscall_handler(struct intr_frame *f UNUSED)
      char *buf = (char *) args[1];
      int n   = args[2];
 
-
-
      // Set the return value that the user program will see
      f->eax = s_write(fd, buf, n);
-
 
     //s_write(f);
     break;
@@ -137,8 +189,7 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // int n = *(int *)(sp + 12);
   // int fd = *(int *)(sp + 4);
 
-
-  // Verify buffer is in valid user memory
+  // Verify buffer is valid
   if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
     
     s_exit(-1);
@@ -148,6 +199,13 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   if (pr_fd == 1) {
     putbuf(pr_buf, n); 
     return n; 
+  }
+  
+  // Write to file if fd is valid
+  if (pr_fd > 1 && pr_fd < FD_TABLE_SIZE) {
+    if (fd_table[pr_fd] != NULL) {
+        return file_write(fd_table[pr_fd], pr_buf, n);
+    }
   }
 
   // Invalid file descriptor or not implemented yet
