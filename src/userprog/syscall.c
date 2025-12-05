@@ -15,6 +15,11 @@ void s_halt ();
 int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
 static bool verify_buf_ptr(const uint8_t *buffer, size_t size);
+int check_invalid_string_error (const void *sbuf);
+int user_to_kernel_ptr(const void *vaddr);
+
+#define MAX_ARGS 5 // SEA
+static void *s_args[MAX_ARGS]; // getting args from functions
 
 void syscall_init(void)
 {
@@ -49,6 +54,8 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
+  char *fname; // for filenames
+  //int args[3];
 
   // Extract system call number from stack.
   if (!verify_user(f->esp))
@@ -57,20 +64,23 @@ syscall_handler(struct intr_frame *f UNUSED)
     thread_exit();
   }
   int call_num = (int)*(int *)(f->esp);
-
+  
   switch (call_num)
   {
   case SYS_HALT:
-
     s_halt();
     break;
   case SYS_EXIT:
-
-
     f->eax = (int)*(int *)(f->esp + 4); // set return value
     s_exit(f->eax);
     break;
   case SYS_EXEC:
+    get_arg(f,(void **)&s_args,1); // get entire exec string
+    fname = (char *) s_args[0];
+    check_invalid_string_error(fname);
+    //printf("Running %s\n",fname);
+    tid_t child_tid = process_execute (fname); // Here fname includes args
+    f->eax = child_tid;
     break;
   case SYS_WAIT:
     break;
@@ -85,13 +95,13 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_READ:
     break;
   case SYS_WRITE:
-    int args[3];
+    
 
     // Extract fd, buffer, size arguments from user stack
-     get_arg(f, args, 3);
-     int fd  = args[0];
-     char *buf = (char *) args[1];
-     int n   = args[2];
+     get_arg(f, s_args, 3);
+     int fd  = s_args[0];
+     char *buf = (char *) s_args[1];
+     int n   = s_args[2];
 
 
 
@@ -216,3 +226,39 @@ verify_buf_ptr(const uint8_t *buffer, size_t size)
 
   return true;
 }
+
+/*
+  Check valid string and valid pointers in it.
+*/
+int check_invalid_string_error (const void *sbuf)
+{
+  char *ptr = (char *) sbuf;
+  int strlen = 0;
+  if (ptr == NULL) s_exit(ERROR); // null pointer for name
+  while (ptr < (char *) sbuf + MAXFILENAMELEN) {
+    user_to_kernel_ptr(ptr); // check valid and mapped
+    if (*ptr == '\0') break;
+    ptr++; strlen++;
+  }
+  
+  return strlen;
+}
+
+/*
+  Get address in page.
+*/
+int user_to_kernel_ptr(const void *vaddr)
+{
+  //check_invalid_ptr_error(vaddr);
+  if (! verify_user( vaddr)) {
+    s_exit(ERROR);
+  }
+
+  void *ptr = pagedir_get_page(thread_current()->pagedir, vaddr);
+  if (!ptr)
+    {
+      s_exit(ERROR);
+    }
+  return (int) ptr;
+}
+

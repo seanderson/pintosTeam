@@ -110,7 +110,7 @@ struct thread
     
     int64_t whenTo;
 
-
+   tid_t parent;  // SEA parent thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
