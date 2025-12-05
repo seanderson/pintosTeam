@@ -50,6 +50,39 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_WAIT:
     break;
   case SYS_CREATE:
+    int args[2];
+    get_arg(f, args, 2);
+    char *fileName = (char *)args[0];
+    unsigned fileZize = (unsigned)args[1];
+
+    // to check for invalid pointer
+    if (!verify_user(u_int8_t *) fileName)
+    {
+      f->eax = -1;
+      break;
+    }
+
+    // if its empty string
+    if (fileName[0] == '\0')
+    {
+      f->eax = -1;
+      break;
+    }
+
+    // to validate every char of string
+    char *ptr = fileName;
+    while (*ptr != '\0')
+    {
+      if (!verify_user(u_int8_t *) ptr)
+      {
+        f->eax = -1;
+        break;
+      }
+      ptr++;
+    }
+    // create file
+    bool fileCreated = filesys_create(fileName, size);
+
     break;
   case SYS_REMOVE:
     break;
@@ -66,7 +99,7 @@ syscall_handler(struct intr_frame *f UNUSED)
       break;
     }
 
-    // if its empty exit == -1
+    // if its empty string
     if (fileName[0] == '\0')
     {
       f->eax = -1;
