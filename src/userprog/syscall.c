@@ -24,8 +24,9 @@ int user_to_kernel_ptr(const void *vaddr);
 #define MAX_ARGS 5 // SEA
 static void *s_args[MAX_ARGS]; // getting args from functions
 
-struct fd {
-    int index;
+// This is a secondary struct for file which will be stored in list fd_table, it's like a metadata for struct file
+struct fd { // I don't have enough time to add the index and elem directly to struct file, this would required me to rewrite Pintos's file system
+    int index; // Keep track of order
     struct file *file;
     struct list_elem elem;
 };
@@ -166,6 +167,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     new_fd->index = next_fd++;
     new_fd->file  = file_pt;
 
+    // Push new entry to fd_table
     list_push_back(&fd_table, &new_fd->elem);
     f->eax = new_fd->index;
 
