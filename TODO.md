@@ -57,7 +57,7 @@
 - [x] read-bad-fd:	
 - [x] read-bad-ptr:	
 - [x] read-boundary:	
-- [ ] read-normal:	
+- [x] read-normal:	
 - [x] read-stdout:	
 - [x] read-zero:	
 - [ ] rox-child:	
