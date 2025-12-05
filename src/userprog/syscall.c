@@ -17,10 +17,14 @@ void s_halt ();
 int s_write(int pr_fd, char *pr_buf, int n);
 static bool verify_user (const uint8_t *uaddr);
 static bool verify_buf_ptr(const uint8_t *buffer, size_t size);
+int check_invalid_string_error (const void *sbuf);
+int user_to_kernel_ptr(const void *vaddr);
 
-#define FD_TABLE_SIZE 30
+#define MAX_ARGS 5 // SEA
+static void *s_args[MAX_ARGS]; // getting args from functions
 
-struct file *fd_table[FD_TABLE_SIZE];
+#define FD_TABLE_SIZE 30 //size of fd table
+struct file *fd_table[FD_TABLE_SIZE]; //fd table
 
 void syscall_init(void)
 {
@@ -59,6 +63,9 @@ static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
   //printf("system call!\n");
+  char *fname; // for filenames
+  //int args[3];
+
   // Extract system call number from stack.
   if (!verify_user(f->esp))
   {
@@ -80,42 +87,45 @@ syscall_handler(struct intr_frame *f UNUSED)
     s_exit(f->eax);
     break;
   case SYS_EXEC:
+    get_arg(f,(void **)&s_args,1); // get entire exec string
+    fname = (char *) s_args[0];
+    check_invalid_string_error(fname);
+    //printf("Running %s\n",fname);
+    tid_t child_tid = process_execute (fname); // Here fname includes args
+    f->eax = child_tid;
     break;
   case SYS_WAIT:
     break;
   case SYS_CREATE:
     
-    int args_syscreate[2];
-    get_arg(f, args_syscreate, 2);
-
-    char *file = (char *)args_syscreate[0];
-    unsigned initial_size = (unsigned)args_syscreate[1];
+    get_arg(f, (int *)s_args, 2);
+    fname = (char *)s_args[0];
+    unsigned initial_size = (unsigned)s_args[1];
 
     // Check if the filename address is valid
-    if (!verify_user((uint8_t *)file)) {
+    if (!verify_user((uint8_t *)fname)) {
         s_exit(-1);
     }
 
     // Create a file 
-    f->eax = filesys_create(file, initial_size);
+    f->eax = filesys_create(fname, initial_size);
     break;
   case SYS_REMOVE:
     break;
   case SYS_OPEN:
   
     // arr for storing 1 element
-    int args_sysopen[1];
-    get_arg(f, args_sysopen, 1);
-    char *fileName = (char *)args_sysopen[0];
+    get_arg(f, (int *)s_args, 1);
+    fname = (char *)s_args[0];
+
     // if its empty exit == -1
-    if (fileName[0] == '\0')
-    {
-      // exit == -1;
+    if (fname[0] == '\0'){
+      f->eax = -1;
       break;
     }
     
     // Open the file 
-    struct file *file_pt = filesys_open(fileName);
+    struct file *file_pt = filesys_open(fname);
     
     // to check the existence of file with given fileName
     if (file_pt == NULL){
@@ -140,13 +150,12 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_READ:
     break;
   case SYS_WRITE:
-    int args[3];
-
+    
     // Extract fd, buffer, size arguments from user stack
-     get_arg(f, args, 3);
-     int fd  = args[0];
-     char *buf = (char *) args[1];
-     int n   = args[2];
+     get_arg(f, (int *)s_args, 3);
+     int fd  = (int)s_args[0];
+     char *buf = (char *) s_args[1];
+     int n   = (int)s_args[2];
 
      // Set the return value that the user program will see
      f->eax = s_write(fd, buf, n);
@@ -175,7 +184,6 @@ void s_exit(int status)
 
 void s_halt()
 {
-
   shutdown_power_off();
 }
 
@@ -274,3 +282,39 @@ verify_buf_ptr(const uint8_t *buffer, size_t size)
 
   return true;
 }
+
+/*
+  Check valid string and valid pointers in it.
+*/
+int check_invalid_string_error (const void *sbuf)
+{
+  char *ptr = (char *) sbuf;
+  int strlen = 0;
+  if (ptr == NULL) s_exit(ERROR); // null pointer for name
+  while (ptr < (char *) sbuf + MAXFILENAMELEN) {
+    user_to_kernel_ptr(ptr); // check valid and mapped
+    if (*ptr == '\0') break;
+    ptr++; strlen++;
+  }
+  
+  return strlen;
+}
+
+/*
+  Get address in page.
+*/
+int user_to_kernel_ptr(const void *vaddr)
+{
+  //check_invalid_ptr_error(vaddr);
+  if (! verify_user( vaddr)) {
+    s_exit(ERROR);
+  }
+
+  void *ptr = pagedir_get_page(thread_current()->pagedir, vaddr);
+  if (!ptr)
+    {
+      s_exit(ERROR);
+    }
+  return (int) ptr;
+}
+

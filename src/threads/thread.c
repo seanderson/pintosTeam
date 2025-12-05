@@ -70,6 +70,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+struct thread *get_thread(tid_t pid);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -248,6 +249,23 @@ thread_name (void)
 {
   return thread_current ()->name;
 }
+
+ struct thread *get_thread(tid_t pid)
+ {
+   struct list_elem *e;
+ 
+   for (e = list_begin (&all_list); e != list_end (&all_list);
+        e = list_next (e))
+     {
+       struct thread *t = list_entry (e, struct thread, allelem);
+       if (t->tid == pid)
+         {
+           return t;
+         }
+     }
+   return NULL;
+ }
+
 
 /* Returns the running thread.
    This is running_thread() plus a couple of sanity checks.
