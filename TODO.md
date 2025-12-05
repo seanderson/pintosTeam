@@ -72,9 +72,9 @@
 - [ ] wait-killed:	
 - [ ] wait-simple:	
 - [ ] wait-twice:	
-- [ ] write-bad-fd:	give bad file descripter; should exit==-1
-- [ ] write-bad-ptr:	give a bad pointer to write; should exit==-1
-- [ ] write-boundary:	write when data spans two pages in VA space
-- [ ] write-normal:	create and write a simple file
-- [ ] write-stdin:	write to stdin
-- [ ] write-zero:	write no bytes to file, doesn't return 0
+- [x] write-bad-fd:	give bad file descripter; should exit==-1
+- [x] write-bad-ptr:	give a bad pointer to write; should exit==-1
+- [x] write-boundary:	write when data spans two pages in VA space
+- [x] write-normal:	create and write a simple file
+- [x] write-stdin:	write to stdin
+- [x] write-zero:	write no bytes to file, doesn't return 0
