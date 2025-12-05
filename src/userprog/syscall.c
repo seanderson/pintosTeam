@@ -7,6 +7,8 @@
 //+SEA
 #include "devices/shutdown.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
@@ -21,10 +23,16 @@ int user_to_kernel_ptr(const void *vaddr);
 #define MAX_ARGS 5 // SEA
 static void *s_args[MAX_ARGS]; // getting args from functions
 
+#define FD_TABLE_SIZE 30 //size of fd table
+struct file *fd_table[FD_TABLE_SIZE]; //fd table
+
 void syscall_init(void)
 {
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
   // intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
+   for (int i = 0; i < FD_TABLE_SIZE; i++){
+    fd_table[i] = NULL;
+   }
 }
 
 /* Gets n arguments from the user stack and stores them in the args array.
@@ -40,7 +48,7 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
     int *sp = (int *)f->esp;
 
     for (int i = 0; i < n; i++) {
-        // Verify the address is in valid user memory
+        // Verify the stack pointer address is valid 
         if (!verify_user(((uint8_t *)&sp[i + 1]))){
           f->eax = (int)*(int *)(f->esp + 4); 
            s_exit(f->eax);
@@ -54,23 +62,27 @@ static void get_arg(struct intr_frame *f, int *args, int n) {
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
+  //printf("system call!\n");
   char *fname; // for filenames
   //int args[3];
 
   // Extract system call number from stack.
   if (!verify_user(f->esp))
   {
-
+    printf("ERROR.  Bad user address.\n");
     thread_exit();
   }
   int call_num = (int)*(int *)(f->esp);
-  
+  //printf("Call num %d\n", call_num);
   switch (call_num)
   {
   case SYS_HALT:
+    //printf("Sys halt\n");
     s_halt();
     break;
   case SYS_EXIT:
+    //printf("Sys exit detected.\n");
+    //printf("Status: %d\n", (int)*(int *)(f->esp + 4));
     f->eax = (int)*(int *)(f->esp + 4); // set return value
     s_exit(f->eax);
     break;
@@ -85,10 +97,53 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_WAIT:
     break;
   case SYS_CREATE:
+    
+    get_arg(f, (int *)s_args, 2);
+    fname = (char *)s_args[0];
+    unsigned initial_size = (unsigned)s_args[1];
+
+    // Check if the filename address is valid
+    if (!verify_user((uint8_t *)fname)) {
+        s_exit(-1);
+    }
+
+    // Create a file 
+    f->eax = filesys_create(fname, initial_size);
     break;
   case SYS_REMOVE:
     break;
   case SYS_OPEN:
+  
+    // arr for storing 1 element
+    get_arg(f, (int *)s_args, 1);
+    fname = (char *)s_args[0];
+
+    // if its empty exit == -1
+    if (fname[0] == '\0'){
+      f->eax = -1;
+      break;
+    }
+    
+    // Open the file 
+    struct file *file_pt = filesys_open(fname);
+    
+    // to check the existence of file with given fileName
+    if (file_pt == NULL){
+      f->eax = -1;
+      break;
+    }
+
+    // Assign the file to the free fd
+    f->eax = -1;
+    for (int i = 2; i< FD_TABLE_SIZE; i++){
+      if(fd_table[i] == NULL){
+        fd_table[i] = file_pt;
+        f->eax = i;
+        break;
+
+      }
+    }
+
     break;
   case SYS_FILESIZE:
     break;
@@ -96,18 +151,14 @@ syscall_handler(struct intr_frame *f UNUSED)
     break;
   case SYS_WRITE:
     
-
     // Extract fd, buffer, size arguments from user stack
-     get_arg(f, s_args, 3);
-     int fd  = s_args[0];
+     get_arg(f, (int *)s_args, 3);
+     int fd  = (int)s_args[0];
      char *buf = (char *) s_args[1];
-     int n   = s_args[2];
-
-
+     int n   = (int)s_args[2];
 
      // Set the return value that the user program will see
      f->eax = s_write(fd, buf, n);
-
 
     //s_write(f);
     break;
@@ -133,7 +184,6 @@ void s_exit(int status)
 
 void s_halt()
 {
-
   shutdown_power_off();
 }
 
@@ -147,8 +197,7 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   // int n = *(int *)(sp + 12);
   // int fd = *(int *)(sp + 4);
 
-
-  // Verify buffer is in valid user memory
+  // Verify buffer is valid
   if (!verify_buf_ptr((uint8_t *)pr_buf, n)){
     
     s_exit(-1);
@@ -158,6 +207,13 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   if (pr_fd == 1) {
     putbuf(pr_buf, n); 
     return n; 
+  }
+  
+  // Write to file if fd is valid
+  if (pr_fd > 1 && pr_fd < FD_TABLE_SIZE) {
+    if (fd_table[pr_fd] != NULL) {
+        return file_write(fd_table[pr_fd], pr_buf, n);
+    }
   }
 
   // Invalid file descriptor or not implemented yet
