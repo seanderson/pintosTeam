@@ -15,36 +15,36 @@
 - [ ] args-many:	extra many user program args
 - [ ] args-multiple:	extra serveral user program args
 - [x] args-none:	extra user program with no args
-- [ ] args-single:	user program with one arg
-- [ ] bad-jump2:	
-- [ ] bad-jump:		
-- [ ] bad-read2:	
-- [ ] bad-read:		
-- [ ] bad-write2:	
-- [ ] bad-write:	
-- [ ] close-bad-fd:	
+- [ ] args-single:  user program with one arg
+- [ ] bad-jump2:  execute code to kernel virtual address; terminate with -1
+- [ ] bad-jump:  execute code to non-mapped address; terminate with -1
+- [ ] bad-read2:	read kernel memory; terminate with -1
+- [ ] bad-read:  read non-mapped memory address; terminate with -1
+- [ ] bad-write2:  write to kernel memory; terminate with -1
+- [ ] bad-write:	write to non-mapped memory address; terminate with -1
+- [ ] close-bad-fd:  close invalid file; fail silently or terminate with -1
 - [ ] close-normal:	close an opened file
 - [ ] close-stdin:	try to close stdin; should fail
-- [ ] close-stdout:	try to close stdout; should fail
-- [ ] close-twice:	
-- [ ] create-bad-ptr:	create file will bad ptr; should fail exit==-1
-- [ ] create-bound:	
+- [ ] close-stdout:  try to close stdout; should fail
+- [ ] close-twice:  closes an opened file twice; second close fail silently or terminate with -1
+- [ ] create-bad-ptr:  create file with bad ptr; should fail exit==-1
+- [ ] create-bound:  open file with a name across 2 pages
 - [ ] create-empty:	create file with "" as filename; should it succeed?
 - [ ] create-exists:	try to create filename that exists; should file
 - [ ] create-long:	try to create with too long fileame; fails with exit==-1
 - [ ] create-normal:	usual creation
 - [ ] create-null:	create file will null ptr; should fail exit==-1
-- [ ] exec-arg:		
-- [ ] exec-bad-ptr:	
-- [ ] exec-bound-2:	
-- [ ] exec-bound-3:	
-- [ ] exec-bound:	
-- [ ] exec-missing:	
-- [ ] exec-multiple:	
-- [x] exec-once:	
+- [ ] exec-arg:  argument passes to child
+- [ ] exec-bad-ptr:  invalid pointer to exec sys call; terminate with -1
+- [ ] exec-bound-2:  parts of exec string ptr arg are invalid; kill process
+- [ ] exec-bound-3:  exec string on page boundary and parts of ptr arg are invalid; kill process
+- [ ] exec-bound:  exec string spans a page boundary
+- [ ] exec-missing:  execute nonexistent process; return -1
+- [ ] exec-multiple:	execute and wait for multiple child processes
+- [x] exec-once:	execute and wait for one child process
 - [ ] exit:	terminate current user program; returns status arg to kernel (0 for success)
 - [ ] halt:	shutdown pintos; may lose state info
-- [ ] multi-child-fd:	
+- [ ] multi-child-fd:  
 - [ ] multi-recurse:	
 - [ ] null:
 - [ ] open-bad-ptr:	open file with bad pointer; should exit==-1
