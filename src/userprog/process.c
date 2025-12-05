@@ -20,8 +20,6 @@
 #include "threads/vaddr.h"
 #include "threads/synch.h"
 
-
-
 static struct list child_wait_list;
 static bool cw_initialized = false;
 
@@ -29,6 +27,13 @@ static bool cw_initialized = false;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+// SEA This is shared between a proc and its child to make the
+// parent wait for child to load.
+struct exec_info {
+  char *name; // name of file/thread to load
+  struct semaphore load_complete; // upped when child is loaded
+  bool success; // child proc run successfully
+};
 
 // Yo, Misha, Zuhayr, Hameed, Kate, Shiraz and Arlo, I figured what happened was 
 // that parent never had the chance to properly keep track of the threads because it was initialized AGAIN
@@ -57,6 +62,11 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+  struct exec_info info;
+
+  
+  info.success = false;
+  sema_init(&info.load_complete,0);
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -64,9 +74,10 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+  info.name = fn_copy; // store name
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, &info);
   
   initialize_if_needed(); // Child list matters
 
@@ -84,6 +95,8 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR) {
     printf("thread creation failed.\n");
     palloc_free_page (fn_copy);
+  } else {
+    sema_down(&info.load_complete); // wait for child to load
   }
   return tid;
 }
@@ -91,22 +104,32 @@ process_execute (const char *file_name)
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process (void *file_name_)
+start_process (void *execinfo) 
 {
-  char *file_name = file_name_;
+ struct exec_info *info = execinfo;
+ char *file_name = info->name;// SEA file_name_;
+
   struct intr_frame if_;
-  bool success;
+  
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  info->success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  struct thread *t = thread_current();
+  //printf("thr %s\n",t->name);
+  tid_t parent = t->parent;
+  struct thread *pt = get_thread(parent);
+  //printf("thr parent %s\n",pt->name);
+  if (t != NULL)
+    sema_up(&info->load_complete); // child loaded; let parent run
+
+  if (!info->success) 
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -224,7 +247,7 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 

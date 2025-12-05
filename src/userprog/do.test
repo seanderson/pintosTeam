@@ -4,7 +4,7 @@
 dir=tests/userprog
 
 # Runs these tests
-declare -a tests=(args-single) # args-none args-single)
+declare -a tests=(args-none exec-once) # args-none args-single)
   
 for test in "${tests[@]}"
 do
