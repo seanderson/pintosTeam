@@ -10,6 +10,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 
+
 static void syscall_handler (struct intr_frame *);
 //void exit (int status);
 void s_exit (int status);
@@ -23,16 +24,24 @@ int user_to_kernel_ptr(const void *vaddr);
 #define MAX_ARGS 5 // SEA
 static void *s_args[MAX_ARGS]; // getting args from functions
 
-#define FD_TABLE_SIZE 30 //size of fd table
-struct file *fd_table[FD_TABLE_SIZE]; //fd table
+struct fd {
+    int index;
+    struct file *file;
+    struct list_elem elem;
+};
+
+
+static struct list fd_table; //fd table
+
+// Next free fd index
+static int next_fd = 2; // 0 is stdin, 1 is stdout, so start with 2
+
 
 void syscall_init(void)
 {
   intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
   // intr_register_int (SYS_EXIT, 3, INTR_ON, exit, "exit");
-   for (int i = 0; i < FD_TABLE_SIZE; i++){
-    fd_table[i] = NULL;
-   }
+  list_init(&fd_table); // Initialize fd_table list
 }
 
 /* Gets n arguments from the user stack and stores them in the args array.
@@ -135,27 +144,36 @@ syscall_handler(struct intr_frame *f UNUSED)
     }
 
     // Assign the file to the free fd
-    f->eax = -1;
-    for (int i = 2; i< FD_TABLE_SIZE; i++){
-      if(fd_table[i] == NULL){
-        fd_table[i] = file_pt;
-        f->eax = i;
-        break;
+    f->eax = -1;      
 
-      }
+    // Search through file list
+    struct list_elem *e;
+    struct fd *cur;
+
+    // Look for the first free fd
+    for (e = list_begin(&fd_table); e != list_end(&fd_table); e = list_next(e)) {
+        cur = list_entry(e, struct fd, elem);
+
+        if (cur->file == NULL) {    // free fd found
+            cur->file = file_pt;
+            f->eax = cur->index;
+            return;
+        }
     }
+
+    // create new entry if no free fd found
+    struct fd *new_fd = malloc(sizeof(struct fd));
+    new_fd->index = next_fd++;
+    new_fd->file  = file_pt;
+
+    list_push_back(&fd_table, &new_fd->elem);
+    f->eax = new_fd->index;
+
+
+    
 
     break;
   case SYS_FILESIZE:
-    get_arg(f, (int *)s_args, 1);
-    int filesize_fd = (int)s_args[0];
-
-    if (filesize_fd  >= 2 && filesize_fd < FD_TABLE_SIZE){
-      if(fd_table[filesize_fd ] != NULL){
-      f->eax = file_length(fd_table[filesize_fd]);
-      break;
-      }
-    }
     break;
   case SYS_READ:
     get_arg(f, (int *)s_args, 3);
@@ -182,13 +200,25 @@ syscall_handler(struct intr_frame *f UNUSED)
       break;
     }
 
-    // Read from file
-    if (read_fd >= 2 && read_fd < FD_TABLE_SIZE){
-      if(fd_table[read_fd] != NULL){
-        f->eax = file_read(fd_table[read_fd], read_buf, read_size);
-        break;
-      }
+    // Search and read from file
+    if (read_fd >= 2) {
+    struct list_elem *e; // For struct fd
+    for (e = list_begin(&fd_table); e != list_end(&fd_table); e = list_next(e)) {
+        struct fd *cur = list_entry(e, struct fd, elem); // current fd
+        if (cur->index == read_fd) {
+            // if file exists, read it
+            f->eax = (cur->file != NULL)
+                     ? file_read(cur->file, read_buf, read_size)
+                     : -1;
+            return;   
+        }
     }
+}
+
+
+    
+
+    
    
     break;
 
@@ -253,13 +283,19 @@ int s_write(int pr_fd, char *pr_buf, int n) {
   }
   
   // Write to file if fd is valid
-  if (pr_fd > 1 && pr_fd < FD_TABLE_SIZE) {
-    if (fd_table[pr_fd] != NULL) {
-        return file_write(fd_table[pr_fd], pr_buf, n);
+  if (pr_fd > 1) {
+    struct list_elem *e;
+    for (e = list_begin(&fd_table); e != list_end(&fd_table); e = list_next(e)) {
+      struct fd *cur = list_entry(e, struct fd, elem);
+      if (cur->index == pr_fd) { // Check if the entry is the fd we are looking for
+        if (cur->file != NULL) { // If the current file is not empty
+          return file_write(cur->file, pr_buf, n);
+        }
+      }
     }
   }
 
-  // Invalid file descriptor or not implemented yet
+  // Invalid fd
   return -1;
 }
 
@@ -360,4 +396,3 @@ int user_to_kernel_ptr(const void *vaddr)
     }
   return (int) ptr;
 }
-
