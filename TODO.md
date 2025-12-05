@@ -2,19 +2,19 @@
 
 ## Sat 15 Nov 2025
 
-- [ ] Determine why the program hangs; killed by 10 sec timeout. AS MP
-- [ ] Review the existing argument parsing and determine whether it works for user programs having multiple arguments.  Indicate problems and propose solutions for this.  ZA
-- [ ] Pass the args-none test (created by typing *make tests/userprog/args-none.result* in userprog/build. TT
-- [ ] Determine how best to access user memory (manual p. 27).  Validating user addresses. HA
+- [ x] Determine why the program hangs; killed by 10 sec timeout. AS MP
+- [x ] Review the existing argument parsing and determine whether it works for user programs having multiple arguments.  Indicate problems and propose solutions for this.  ZA
+- [x ] Pass the args-none test (created by typing *make tests/userprog/args-none.result* in userprog/build. TT
+- [x ] Determine how best to access user memory (manual p. 27).  Validating user addresses. HA
 - [ ] Implement exit syscall.  What happens when a program ends? SK
-- [ ] Syscall write needs to work. KK
+- [ x] Syscall write needs to work. KK
 
 ## All tests we want to pass with descriptions.  Keep this list intact.  Please fill these descriptions out by reading the test/userprog/*.c files!
 
 - [ ] args-dbl-space:	extra space in user program args
 - [ ] args-many:	extra many user program args
 - [ ] args-multiple:	extra serveral user program args
-- [ ] args-none:	extra user program with no args
+- [ x] args-none:	extra user program with no args
 - [ ] args-single:	user program with one arg
 - [ ] bad-jump2:	
 - [ ] bad-jump:		
@@ -41,7 +41,7 @@
 - [ ] exec-bound:	
 - [ ] exec-missing:	
 - [ ] exec-multiple:	
-- [ ] exec-once:	
+- [x ] exec-once:	
 - [ ] exit:	terminate current user program; returns status arg to kernel (0 for success)
 - [ ] halt:	shutdown pintos; may lose state info
 - [ ] multi-child-fd:	
