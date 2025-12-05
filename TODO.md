@@ -35,12 +35,12 @@
 - [x] create-normal:	usual creation
 - [x] create-null:	create file will null ptr; should fail exit==-1
 - [ ] exec-arg:  argument passes to child
-- [ ] exec-bad-ptr:  invalid pointer to exec sys call; terminate with -1
+- [x] exec-bad-ptr:  invalid pointer to exec sys call; terminate with -1
 - [ ] exec-bound-2:  parts of exec string ptr arg are invalid; kill process
-- [ ] exec-bound-3:  exec string on page boundary and parts of ptr arg are invalid; kill process
-- [ ] exec-bound:  exec string spans a page boundary
+- [x] exec-bound-3:  exec string on page boundary and parts of ptr arg are invalid; kill process
+- [x] exec-bound:  exec string spans a page boundary
 - [ ] exec-missing:  execute nonexistent process; return -1
-- [ ] exec-multiple:	execute and wait for multiple child processes
+- [x] exec-multiple:	execute and wait for multiple child processes
 - [x] exec-once:	execute and wait for one child process
 - [ ] exit:	terminate current user program; returns status arg to kernel (0 for success)
 - [ ] halt:	shutdown pintos; may lose state info
