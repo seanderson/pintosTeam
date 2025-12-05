@@ -58,6 +58,14 @@ syscall_handler(struct intr_frame *f UNUSED)
     int args[1];
     get_arg(f, args, 1);
     char *fileName = (char *)args[0];
+
+    // to check for invalid pointer
+    if (!verify_user(u_int8_t *) fileName)
+    {
+      f->eax = -1;
+      break;
+    }
+
     // if its empty exit == -1
     if (fileName[0] == '\0')
     {
