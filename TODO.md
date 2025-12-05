@@ -22,18 +22,18 @@
 - [ ] bad-read:  read non-mapped memory address; terminate with -1
 - [ ] bad-write2:  write to kernel memory; terminate with -1
 - [ ] bad-write:	write to non-mapped memory address; terminate with -1
-- [ ] close-bad-fd:  close invalid file; fail silently or terminate with -1
-- [ ] close-normal:	close an opened file
-- [ ] close-stdin:	try to close stdin; should fail
-- [ ] close-stdout:  try to close stdout; should fail
-- [ ] close-twice:  closes an opened file twice; second close fail silently or terminate with -1
-- [ ] create-bad-ptr:  create file with bad ptr; should fail exit==-1
-- [ ] create-bound:  open file with a name across 2 pages
-- [ ] create-empty:	create file with "" as filename; should it succeed?
-- [ ] create-exists:	try to create filename that exists; should file
-- [ ] create-long:	try to create with too long fileame; fails with exit==-1
-- [ ] create-normal:	usual creation
-- [ ] create-null:	create file will null ptr; should fail exit==-1
+- [x] close-bad-fd:  close invalid file; fail silently or terminate with -1
+- [x] close-normal:	close an opened file
+- [x] close-stdin:	try to close stdin; should fail
+- [x] close-stdout:  try to close stdout; should fail
+- [x] close-twice:  closes an opened file twice; second close fail silently or terminate with -1
+- [x] create-bad-ptr:  create file with bad ptr; should fail exit==-1
+- [x] create-bound:  open file with a name across 2 pages
+- [x] create-empty:	create file with "" as filename; should it succeed?
+- [x] create-exists:	try to create filename that exists; should file
+- [x] create-long:	try to create with too long fileame; fails with exit==-1
+- [x] create-normal:	usual creation
+- [x] create-null:	create file will null ptr; should fail exit==-1
 - [ ] exec-arg:  argument passes to child
 - [ ] exec-bad-ptr:  invalid pointer to exec sys call; terminate with -1
 - [ ] exec-bound-2:  parts of exec string ptr arg are invalid; kill process
@@ -47,19 +47,19 @@
 - [ ] multi-child-fd:  
 - [ ] multi-recurse:	
 - [ ] null:
-- [ ] open-bad-ptr:	open file with bad pointer; should exit==-1
-- [ ] open-boundary:	open file with name spanning page boundard; should succeed
-- [ ] open-empty:	open file with empty string name; should exit==-1
-- [ ] open-missing:	open file that does not exist; should exit==-1
-- [ ] open-normal:	open file that exists
-- [ ] open-null:	open file that is null pointer; should exit==-1
-- [ ] open-twice:	open file with same name twice; should succeed with different fds
-- [ ] read-bad-fd:	
-- [ ] read-bad-ptr:	
-- [ ] read-boundary:	
+- [x] open-bad-ptr:	open file with bad pointer; should exit==-1
+- [x] open-boundary:	open file with name spanning page boundard; should succeed
+- [x] open-empty:	open file with empty string name; should exit==-1
+- [x] open-missing:	open file that does not exist; should exit==-1
+- [x] open-normal:	open file that exists
+- [x] open-null:	open file that is null pointer; should exit==-1
+- [x] open-twice:	open file with same name twice; should succeed with different fds
+- [x] read-bad-fd:	
+- [x] read-bad-ptr:	
+- [x] read-boundary:	
 - [ ] read-normal:	
-- [ ] read-stdout:	
-- [ ] read-zero:	
+- [x] read-stdout:	
+- [x] read-zero:	
 - [ ] rox-child:	
 - [ ] rox-multichild:	
 - [ ] rox-simple:	
