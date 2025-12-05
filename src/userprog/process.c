@@ -357,7 +357,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
        args[argcount] != NULL;
        args[argcount] = strtok_r (NULL, " ", &save_ptr)) {
     
-    printf ("%s\n", args[argcount]);
+    // printf ("%s\n", args[argcunt]);
     argcount++;
   }
   /*
@@ -368,10 +368,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // SEA end
   
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (fname);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+      //printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
 

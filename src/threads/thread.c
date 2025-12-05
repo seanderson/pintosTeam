@@ -477,6 +477,8 @@ init_thread (struct thread *t, const char *name, int priority)
 
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
+  char *save_ptr; // SEA disallow spaces in name
+  name = strtok_r(name," ",&save_ptr);
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
