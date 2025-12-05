@@ -44,9 +44,9 @@
 - [x] exec-once:	execute and wait for one child process
 - [ ] exit:	terminate current user program; returns status arg to kernel (0 for success)
 - [ ] halt:	shutdown pintos; may lose state info
-- [ ] multi-child-fd:  
-- [ ] multi-recurse:	
-- [ ] null:
+- [ ] multi-child-fd:  runs a subprocess to close a file; must fail, parent process uses file handle (must succeed)
+- [ ] multi-recurse:	executes recursively
+- [ ] null:  check systems
 - [x] open-bad-ptr:	open file with bad pointer; should exit==-1
 - [x] open-boundary:	open file with name spanning page boundard; should succeed
 - [x] open-empty:	open file with empty string name; should exit==-1
@@ -54,24 +54,24 @@
 - [x] open-normal:	open file that exists
 - [x] open-null:	open file that is null pointer; should exit==-1
 - [x] open-twice:	open file with same name twice; should succeed with different fds
-- [x] read-bad-fd:	
-- [x] read-bad-ptr:	
-- [x] read-boundary:	
-- [x] read-normal:	
-- [x] read-stdout:	
-- [x] read-zero:	
-- [ ] rox-child:	
-- [ ] rox-multichild:	
-- [ ] rox-simple:	
-- [ ] sc-bad-arg:	
-- [ ] sc-bad-sp:	
-- [ ] sc-boundary-2:	
-- [ ] sc-boundary-3:	
-- [ ] sc-boundary:	
-- [ ] wait-bad-pid:	
-- [ ] wait-killed:	
-- [ ] wait-simple:	
-- [ ] wait-twice:	
+- [x] read-bad-fd:	read invalid fd; fail silently or terminate with -1
+- [x] read-bad-ptr:  pass invalid ptr; terminate with -1
+- [x] read-boundary:	reads data across two pages (virtual address space); must succeed
+- [x] read-normal:	read file normal
+- [x] read-stdout:	read from fd 1; may fail or terminate with -1
+- [x] read-zero:	try a 0-byte read; return 0
+- [ ] rox-child:  running process can't be modified
+- [ ] rox-multichild:  executable of running process can't be modified
+- [ ] rox-simple:  executable of a running process can't be modified
+- [ ] sc-bad-arg:  sticks sys call # at top of stack; terminate with -1
+- [ ] sc-bad-sp:	invoke sys call with stack pntr; terminated with -1
+- [ ] sc-boundary-2:  invoke sys call with 1-byte of sys call arg on a seperate page; must work
+- [ ] sc-boundary-3:	invoke sys call with sys call # with some parts invalid; must kill process
+- [ ] sc-boundary:	invoke sys call with sys call # and it's args on diff pages; must work
+- [ ] wait-bad-pid:  wait for invalid pid; may fail or terminate with -1
+- [ ] wait-killed:	wait for process to be killed
+- [ ] wait-simple:	wait for subprocess
+- [ ] wait-twice:  wait for subprocess to finish twice; return exit code, second return -1
 - [x] write-bad-fd:	give bad file descripter; should exit==-1
 - [x] write-bad-ptr:	give a bad pointer to write; should exit==-1
 - [x] write-boundary:	write when data spans two pages in VA space
