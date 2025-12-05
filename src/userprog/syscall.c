@@ -147,6 +147,15 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     break;
   case SYS_FILESIZE:
+    get_arg(f, (int *)s_args, 1);
+    int filesize_fd = (int)s_args[0];
+
+    if (filesize_fd  >= 2 && filesize_fd < FD_TABLE_SIZE){
+      if(fd_table[filesize_fd ] != NULL){
+      f->eax = file_length(fd_table[filesize_fd]);
+      break;
+      }
+    }
     break;
   case SYS_READ:
     get_arg(f, (int *)s_args, 3);
