@@ -61,14 +61,14 @@ syscall_handler(struct intr_frame *f UNUSED)
     // if its empty exit == -1
     if (fileName[0] == '\0')
     {
-      // exit == -1;
+      f->eax = -1;
       break;
     }
     // to check the existence of file with given fileName
     struct file *fileCheck = filesys_open(fileName);
     if (fileCheck == NULL)
     {
-      // exit ==-1
+      f->eax = -1;
     }
     break;
   case SYS_FILESIZE:
