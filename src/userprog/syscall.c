@@ -28,7 +28,7 @@ static void *s_args[MAX_ARGS]; // getting args from functions
 struct fd { // I don't have enough time to add the index and elem directly to struct file, this would required me to rewrite Pintos's file system
     int index; // Keep track of order
     struct file *file;
-    struct list_elem elem;
+    struct list_elem elem;  
 };
 
 
@@ -99,10 +99,20 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_EXEC:
     get_arg(f,(void **)&s_args,1); // get entire exec string
     fname = (char *) s_args[0];
+    // Validate the pointer
+    if (fname == NULL || !verify_user(fname)) {
+      f->eax = -1;
+      break;
+    }
     check_invalid_string_error(fname);
     //printf("Running %s\n",fname);
     tid_t child_tid = process_execute (fname); // Here fname includes args
-    f->eax = child_tid;
+    // If process_execute returns TID_ERROR, return -1 to user
+    if (child_tid == TID_ERROR) {
+      f->eax = -1;
+    } else {
+      f->eax = child_tid;
+    }
     break;
   case SYS_WAIT:
     break;
