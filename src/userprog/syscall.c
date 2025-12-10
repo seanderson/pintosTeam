@@ -176,6 +176,30 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     break;
   case SYS_FILESIZE:
+    get_arg(f, (int *)s_args, 1);
+    int fd = (int)s_args[0];
+
+    // stdin and stdout have no size
+    if (fd == 0 || fd == 1) {
+        f->eax = -1;
+        break;
+    }
+
+    // Search fd_table
+    struct list_elem *e;
+    f->eax = -1;   // initially -1, will be replaced if found
+
+    for (e = list_begin(&fd_table); e != list_end(&fd_table); e = list_next(e)) {
+        struct fd *cur = list_entry(e, struct fd, elem);
+
+        // Match the fd index
+        if (cur->index == fd) {
+            if (cur->file != NULL) // if not empty
+                f->eax = file_length(cur->file);   // assign file size
+            break;
+        }
+    }
+      
     break;
   case SYS_READ:
     get_arg(f, (int *)s_args, 3);
