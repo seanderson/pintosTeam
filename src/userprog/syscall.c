@@ -28,7 +28,7 @@ static void *s_args[MAX_ARGS]; // getting args from functions
 struct fd { // I don't have enough time to add the index and elem directly to struct file, this would required me to rewrite Pintos's file system
     int index; // Keep track of order
     struct file *file;
-    struct list_elem elem;  
+    struct list_elem elem;
 };
 
 
@@ -99,20 +99,10 @@ syscall_handler(struct intr_frame *f UNUSED)
   case SYS_EXEC:
     get_arg(f,(void **)&s_args,1); // get entire exec string
     fname = (char *) s_args[0];
-    // Validate the pointer
-    if (fname == NULL || !verify_user(fname)) {
-      f->eax = -1;
-      break;
-    }
     check_invalid_string_error(fname);
     //printf("Running %s\n",fname);
     tid_t child_tid = process_execute (fname); // Here fname includes args
-    // If process_execute returns TID_ERROR, return -1 to user
-    if (child_tid == TID_ERROR) {
-      f->eax = -1;
-    } else {
-      f->eax = child_tid;
-    }
+    f->eax = child_tid;
     break;
   case SYS_WAIT:
     break;
@@ -186,6 +176,30 @@ syscall_handler(struct intr_frame *f UNUSED)
 
     break;
   case SYS_FILESIZE:
+    get_arg(f, (int *)s_args, 1);
+    int fd_index = (int)s_args[0];
+
+    // stdin and stdout have no size
+    if (fd_index == 0 || fd_index == 1) {
+        f->eax = -1;
+        break;
+    }
+
+    // Search fd_table
+    struct list_elem *entry;
+    f->eax = -1;   // initially -1, will be replaced if found
+
+    for (entry = list_begin(&fd_table); entry != list_end(&fd_table); entry = list_next(entry)) {
+        struct fd *cur = list_entry(entry, struct fd, elem);
+
+        // Match the fd index
+        if (cur->index == fd_index) {
+            if (cur->file != NULL) // if not empty
+                f->eax = file_length(cur->file);   // assign file size
+            break;
+        }
+    }
+      
     break;
   case SYS_READ:
     get_arg(f, (int *)s_args, 3);
