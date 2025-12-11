@@ -104,13 +104,12 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     
-    int mlfq_ticks;        
-    struct list_elem ready_elem;
+
     int exit_status;
     
-    int64_t whenTo;
 
-   tid_t parent;  // SEA parent thread
+
+    tid_t parent;  // SEA parent thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
