@@ -78,18 +78,26 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, &info);
-  
+  	//Creating a child; 
+	if (tid == TID_ERROR) {
+    palloc_free_page (fn_copy);
+    return TID_ERROR;
+  }
   initialize_if_needed(); // Child list matters
 
   // Initialize a new struct child_wait to start tracking this child thread.
   struct child_wait *cw = malloc(sizeof *cw);
+	if (cw == NULL)
+    return TID_ERROR;
+	
   cw->child_tid = tid;
   cw->parent_tid = thread_current()->tid;
   cw->exit_status = -1;
   cw->waited = false;
-
+   //Adding the child to the parents list of children; 
+  lock_acquire (&child_lock);
   list_push_back(&child_wait_list, &cw->elem);
-
+  lock_release (&child_lock);
   sema_init(&cw->sema, 0);
   
   if (tid == TID_ERROR) {
