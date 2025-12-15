@@ -118,7 +118,7 @@ start_process (void *execinfo)
  char *file_name = info->name;// SEA file_name_;
 
   struct intr_frame if_;
-  
+  bool success;
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -164,7 +164,8 @@ process_wait(tid_t child_tid)
 {
   // child list HAS to be initialized
   initialize_if_needed();
-
+	
+  struct thread *cur = thread_current ();
   struct child_wait *cw = NULL;
   struct list_elem *e;
 
@@ -192,8 +193,10 @@ process_wait(tid_t child_tid)
 
   // After child exits, get its exit status and remove from list  
   int status = cw->exit_status;
+  lock_acquire (&child_lock);	
   list_remove(&cw->elem);
-
+  lock_release (&child_lock);
+	
   // Give peace to the child thread
   free(cw);
   return status;
@@ -220,6 +223,15 @@ process_exit (void)
     sema_up(&cw->sema);
     break; // We only need one child
   }
+	  //Making sure that we there are no children that were never waited on
+  lock_acquire (&child_lock);
+  while (!list_empty (&cur->children)) {
+    struct list_elem *e = list_pop_front (&cur->children);
+    struct child_wait *cw = list_entry (e, struct child_wait, elem);
+    free (cw);
+  }
+  lock_release (&child_lock);
+}
 }
 
   /* Destroy the current process's page directory and switch back
